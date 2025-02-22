@@ -17,6 +17,7 @@ var userSchema = new mongoose.Schema(
     },
     phonenumber: {
       type: String,
+      trim: true,
     },
     password: {
       type: String,
@@ -25,21 +26,26 @@ var userSchema = new mongoose.Schema(
     gender: {
       type: String,
       enum: ["female", "male", "other"],
+      default: "other",
     },
     role: {
-      type: String,
+      type: [String],
       enum: ["user", "manager", "admin", "shipper"],
-      default: "user",
+      default: ["user"],
     },
-    avatar: [
-      {
-        url: String,
-        createdAt: Date,
+    avatar: {
+      filePath: { type: String, required: false },
+      url: {
+        type: String,
+        required: true,
+        default: "https://res.cloudinary.com/datnguyen240/image/upload/v1722168751/avatars/avatar_pnncdk.png",
       },
-    ],
+      createdAt: { type: Date, default: Date.now },
+    },
     refreshToken: {
       type: String,
     },
+    isGoogleLogin: { type: Boolean, default: false },
     passwordChangedAt: Date,
     passwordResetToken: String,
     passwordResetExpires: Date,
@@ -67,15 +73,6 @@ userSchema.pre("save", async function (next) {
 userSchema.methods.isPasswordMatched = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
-
-userSchema.pre("save", function (next) {
-  if (this.isNew && !this.avatar.length) {
-    this.avatar.push({
-      url: "https://res.cloudinary.com/datnguyen240/image/upload/v1722168751/avatars/avatar_pnncdk.png",
-    });
-  }
-  next();
-});
 
 userSchema.methods.createPasswordResetToken = async function () {
   const resetToken = crypto.randomBytes(32).toString("hex");

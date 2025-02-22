@@ -1,25 +1,15 @@
 const express = require("express");
 const authMiddleware = require("../../middlewares/authMiddleware");
-const {
-  register,
-  login,
-  logout,
-  getRefreshToken,
-  updatePassword,
-  forgotPasswordToken,
-  resetPassword,
-} = require("./user.controller");
+const validateMongoDbId = require("../../middlewares/validateMongoDBId");
+const { getAllUser, getUser, updateUser, deleteUser } = require("./user.controller");
 
 const router = express.Router();
 
-router.post("/register", register);
-router.post("/login", login);
-router.post("/forgot-password-token", forgotPasswordToken);
+router.get("/", authMiddleware, getAllUser);
+router.get("/:id", validateMongoDbId("id"), getUser);
 
-router.get("/logout", logout);
-router.get("/refresh", getRefreshToken);
+router.put("/:id", authMiddleware, validateMongoDbId("id"), updateUser);
 
-router.put("/reset-password/:token", resetPassword);
-router.put("/password", authMiddleware, updatePassword);
+router.delete("/:id", authMiddleware, validateMongoDbId("id"), deleteUser);
 
 module.exports = router;
