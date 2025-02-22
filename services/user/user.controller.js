@@ -1,6 +1,7 @@
 const User = require("./user.model");
 const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
+const bcrypt = require("bcrypt");
 
 const getAllUser = asyncHandler(async (req, res, next) => {
   try {
@@ -37,6 +38,32 @@ const updateUser = asyncHandler(async (req, res, next) => {
   }
 });
 
+const changeUserPassword = asyncHandler(async (req, res, next) => {
+  const userId = req?.user?._id;
+  const { oldPassword, newPassword } = req.body;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return next(createError(404, "User not found"));
+
+    // Kiểm tra mật khẩu cũ
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) return next(createError(400, "Mật khẩu cũ không đúng"));
+
+    // Mã hóa mật khẩu mới
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(this.password, salt);
+
+    // Cập nhật mật khẩu
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Đổi mật khẩu thành công" });
+  } catch (error) {
+    next(error);
+  }
+});
+
 const deleteUser = asyncHandler(async (req, res, next) => {
   const userId = req?.user?._id;
   try {
@@ -47,4 +74,4 @@ const deleteUser = asyncHandler(async (req, res, next) => {
   }
 });
 
-module.exports = { getAllUser, getUser, updateUser, deleteUser };
+module.exports = { getAllUser, getUser, updateUser, changeUserPassword, deleteUser };

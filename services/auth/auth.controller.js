@@ -130,7 +130,7 @@ const getRefreshToken = asyncHandler(async (req, res, next) => {
 
 const logout = asyncHandler(async (req, res, next) => {
   const cookie = req.cookies;
-  if (!cookie?.refreshToken) return next(createError(400, "No refresh token in cookies"));
+  if (!cookie?.refreshToken) return next(createError(204, "No refresh token in cookies"));
 
   const refreshToken = cookie.refreshToken;
   const user = await User.findOne({ refreshToken });
@@ -141,7 +141,7 @@ const logout = asyncHandler(async (req, res, next) => {
   res.clearCookie("refreshToken", {
     httpOnly: true,
     secure: true,
-    sameSite: true,
+    sameSite: "Strict",
   });
   res.status(200).json({ message: "Logout successful" });
 });

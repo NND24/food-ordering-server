@@ -11,6 +11,7 @@ const socketIo = require("socket.io");
 const morgan = require("morgan");
 const authRoute = require("./services/auth/auth.routes");
 const userRoute = require("./services/user/user.routes");
+const uploadRoute = require("./services/upload/upload.routes");
 
 const app = express();
 connectDB();
@@ -29,6 +30,7 @@ app.use(cookieParser());
 // Routes
 app.use("/api/v1/auth", authRoute);
 app.use("/api/v1/user", userRoute);
+app.use("/api/v1/upload", uploadRoute);
 
 app.use(errorHandler);
 
