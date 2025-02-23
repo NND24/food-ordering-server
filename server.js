@@ -12,6 +12,8 @@ const morgan = require("morgan");
 const authRoute = require("./services/auth/auth.routes");
 const userRoute = require("./services/user/user.routes");
 const uploadRoute = require("./services/upload/upload.routes");
+const notificationRoute = require("./services/notification/notification.routes");
+const Notification = require("./services/notification/notification.model");
 
 const app = express();
 connectDB();
@@ -31,6 +33,7 @@ app.use(cookieParser());
 app.use("/api/v1/auth", authRoute);
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/upload", uploadRoute);
+app.use("/api/v1/notification", notificationRoute);
 
 app.use(errorHandler);
 
@@ -39,16 +42,49 @@ PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 const io = socketIo(server, { cors: { origin: "http://localhost:3000" } });
 
-io.on("connection", (socket) => {
-  console.log("Shipper connected:", socket.id);
+const userSockets = {};
 
-  socket.on("updateLocation", (data) => {
+io.on("connection", (socket) => {
+  // Nhận user ID từ client khi kết nối
+  socket.on("registerUser", async (userId) => {
+    userSockets[userId] = socket.id;
+    console.log(`User ${userId} connected with socket ID: ${socket.id}`);
+
+    // Khi user kết nối, lấy tất cả thông báo của họ
+    try {
+      const allNotifications = await Notification.find({ userId }).sort({ createdAt: -1 });
+      socket.emit("getAllNotifications", allNotifications); // Gửi về client
+    } catch (error) {
+      console.error("Lỗi lấy thông báo:", error);
+    }
+  });
+
+  // Gửi thông báo đến một user cụ thể
+  socket.on("sendNotification", async ({ userId, title, message, type }) => {
+    try {
+      const newNotification = new Notification({ userId, title, message, type });
+      await newNotification.save();
+
+      if (userSockets[userId]) {
+        io.to(userSockets[userId]).emit("newNotification", newNotification);
+      }
+    } catch (error) {
+      console.error("Lỗi gửi thông báo:", error);
+    }
+  });
+
+  socket.on("sendLocation", (data) => {
     console.log("Shipper location:", data);
     io.emit("updateLocation", data);
   });
 
   socket.on("disconnect", () => {
-    console.log("Shipper disconnected:", socket.id);
+    console.log("User disconnected:", socket.id);
+    Object.keys(userSockets).forEach((userId) => {
+      if (userSockets[userId] === socket.id) {
+        delete userSockets[userId];
+      }
+    });
   });
 });
 
