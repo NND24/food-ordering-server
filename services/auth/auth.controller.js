@@ -4,6 +4,7 @@ const createError = require("../../utils/createError");
 const crypto = require("crypto");
 const asyncHandler = require("express-async-handler");
 const { OAuth2Client } = require("google-auth-library");
+const sendEmail = require("../../utils/sendEmail");
 
 const generateAccessToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "3d" });
@@ -15,7 +16,7 @@ const generateRefreshToken = (id) => {
 
 const register = asyncHandler(async (req, res, next) => {
   const { name, email, phonenumber, gender, password } = req.body;
-  const findUser = await User.findOne({ email: email });
+  const findUser = await User.findOne({ email });
   if (!findUser) {
     await User.create({
       name,
@@ -146,56 +147,73 @@ const logout = asyncHandler(async (req, res, next) => {
   res.status(200).json({ message: "Logout successful" });
 });
 
-const updatePassword = asyncHandler(async (req, res) => {
+const changePassword = asyncHandler(async (req, res) => {
   const { _id } = req.user;
-  const { password } = req.body;
+  const { oldPassword, newPassword } = req.body;
 
   const user = await User.findById(_id);
-  if (password) {
-    user.password = password;
-    await user.save();
-    res.status(200).json("Password updated successfully!");
-  } else {
-    res.json(user);
-  }
+  if (!user) return next(createError(404, "User not found"));
+
+  // Kiểm tra mật khẩu cũ
+  const isMatch = await user.isPasswordMatched(oldPassword);
+  if (!isMatch) return next(createError(400, "Mật khẩu cũ không đúng"));
+
+  user.password = newPassword;
+  await user.save();
+
+  res.status(200).json("Đổi mật khẩu thành công!");
 });
 
-const forgotPasswordToken = asyncHandler(async (req, res, next) => {
-  const { email } = req.body;
-  const user = await User.findOne({ email });
-  if (!user) return next(create("404", "User not found with this email"));
+const resetPassword = asyncHandler(async (req, res) => {
+  const { email, newPassword } = req.body;
 
-  const token = await user.createPasswordResetToken();
+  const user = await User.findOne({ email });
+  if (!user) return next(createError(404, "User not found"));
+
+  user.password = newPassword;
+  await user.save();
+
+  res.status(200).json("Đổi mật khẩu thành công!");
+});
+
+const forgotPassword = asyncHandler(async (req, res, next) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email, isGoogleLogin: false });
+  if (!user)
+    return next(createError("404", "Tài khoản không tồn tại hoặc tài khoản được đăng nhập bằng phương thức khác"));
+
+  const otp = await user.createOtp();
   await user.save();
   const resetURL = `
-      <p>Please follow this link to reset your password. This link is valid till 10 minutes from now.</p>
-      <button>
-        <a href='http://localhost:3000/reset-password/${token}'>Click Here</>
-      </button>
+      <p>Mã OTP của bạn là: ${otp}</p>
+      <p>Vui lòng nhập mã này để lấy lại mật khẩu. OTP sẽ hết hạn trong 2 phút</p>
     `;
   const data = {
     to: email,
     text: "",
-    subject: "Forgot Password Link",
+    subject: "Forgot Password OTP",
     htm: resetURL,
   };
-  // sendEmail(data);
+  sendEmail(data);
   res.status(200).json("Send email successfully");
 });
 
-const resetPassword = asyncHandler(async (req, res) => {
-  const { password } = req.body;
-  const { token } = req.params;
-  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+const checkOTP = asyncHandler(async (req, res, next) => {
+  const { email, otp } = req.body;
+  const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
   const user = await User.findOne({
-    passwordResetToken: hashedToken,
-    passwordResetExpires: { $gt: Date.now() },
+    email,
+    otp: hashedOTP,
+    otpExpires: { $gt: Date.now() },
   });
-  if (!user) return next(create("400", "Token expired, please try again later"));
-  user.password = password;
-  (user.passwordResetToken = undefined), (user.passwordResetExpires = undefined);
+
+  if (!user) return next(createError("400", "OPT đã hết hạn hoặc không đúng mã, vui lòng thử lại"));
+
+  user.otp = undefined;
+  user.otpExpires = undefined;
   await user.save();
-  res.status(200).json("Reset password successfully");
+
+  res.status(200).json("OTP hợp lệ");
 });
 
 module.exports = {
@@ -204,7 +222,8 @@ module.exports = {
   googleLoginWithToken,
   getRefreshToken,
   logout,
-  updatePassword,
-  forgotPasswordToken,
+  changePassword,
   resetPassword,
+  forgotPassword,
+  checkOTP,
 };

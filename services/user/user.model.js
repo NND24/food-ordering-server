@@ -46,9 +46,8 @@ var userSchema = new mongoose.Schema(
       type: String,
     },
     isGoogleLogin: { type: Boolean, default: false },
-    passwordChangedAt: Date,
-    passwordResetToken: String,
-    passwordResetExpires: Date,
+    otp: String,
+    otpExpires: Date,
   },
   {
     timestamps: true,
@@ -74,11 +73,20 @@ userSchema.methods.isPasswordMatched = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-userSchema.methods.createPasswordResetToken = async function () {
-  const resetToken = crypto.randomBytes(32).toString("hex");
-  this.passwordResetToken = crypto.createHash("sha256").update(resetToken).digest("hex");
-  this.passwordResetExpires = Date.now() + 30 * 60 * 1000;
-  return resetToken;
+userSchema.methods.createOtp = async function () {
+  // Tạo OTP gồm 6 số
+  const newOTP = Math.floor(100000 + Math.random() * 900000).toString();
+
+  // Mã hóa OTP trước khi lưu vào database
+  this.otp = crypto.createHash("sha256").update(newOTP).digest("hex");
+
+  // Thời gian hết hạn trong 2 phút
+  this.otpExpires = Date.now() + 2 * 60 * 1000;
+
+  await this.save();
+
+  // Trả về OTP (chưa mã hóa) để gửi cho người dùng
+  return newOTP;
 };
 
 module.exports = mongoose.model("User", userSchema);

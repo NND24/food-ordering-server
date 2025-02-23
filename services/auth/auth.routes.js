@@ -5,23 +5,25 @@ const {
   login,
   logout,
   getRefreshToken,
-  updatePassword,
-  forgotPasswordToken,
+  changePassword,
   resetPassword,
+  forgotPassword,
+  checkOTP,
   googleLoginWithToken,
 } = require("./auth.controller");
 
 const router = express.Router();
 
 router.post("/register", register);
-router.post("/forgot-password-token", forgotPasswordToken);
 router.post("/login", login);
 router.post("/login/google", googleLoginWithToken);
+router.post("/forgot-password", forgotPassword);
+router.post("/check-otp", checkOTP);
 
 router.get("/logout", logout);
 router.get("/refresh", getRefreshToken);
 
-router.put("/reset-password/:token", resetPassword);
-router.put("/password", authMiddleware, updatePassword);
+router.put("/change-password", authMiddleware, changePassword);
+router.put("/reset-password", resetPassword);
 
 module.exports = router;
