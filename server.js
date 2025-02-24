@@ -9,11 +9,13 @@ const connectDB = require("./config/connectDB");
 const http = require("http");
 const socketIo = require("socket.io");
 const morgan = require("morgan");
+const Notification = require("./services/notification/notification.model");
 const authRoute = require("./services/auth/auth.routes");
 const userRoute = require("./services/user/user.routes");
 const uploadRoute = require("./services/upload/upload.routes");
 const notificationRoute = require("./services/notification/notification.routes");
-const Notification = require("./services/notification/notification.model");
+const messageRoute = require("./services/message/message.routes");
+const chatRoute = require("./services/chat/chat.routes");
 
 const app = express();
 connectDB();
@@ -34,6 +36,8 @@ app.use("/api/v1/auth", authRoute);
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/upload", uploadRoute);
 app.use("/api/v1/notification", notificationRoute);
+app.use("/api/v1/message", messageRoute);
+app.use("/api/v1/chat", chatRoute);
 
 app.use(errorHandler);
 
@@ -76,6 +80,25 @@ io.on("connection", (socket) => {
   socket.on("sendLocation", (data) => {
     console.log("Shipper location:", data);
     io.emit("updateLocation", data);
+  });
+
+  // Handle message
+  socket.on("joinChat", (room) => {
+    socket.join(room);
+    console.log(`User joined room: ${room}`);
+  });
+
+  socket.on("leaveChat", (room) => {
+    socket.leave(room);
+    console.log(`User left room: ${room}`);
+  });
+
+  socket.on("sendMessage", (newMessageReceived) => {
+    io.to(newMessageReceived.id).emit("messageReceived", newMessageReceived);
+  });
+
+  socket.on("deleteMessage", (id) => {
+    io.to(id).emit("messageDeleted");
   });
 
   socket.on("disconnect", () => {
