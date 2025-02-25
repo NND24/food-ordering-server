@@ -16,6 +16,7 @@ const uploadRoute = require("./services/upload/upload.routes");
 const notificationRoute = require("./services/notification/notification.routes");
 const messageRoute = require("./services/message/message.routes");
 const chatRoute = require("./services/chat/chat.routes");
+const locationRoute = require("./services/location/location.routes");
 
 const app = express();
 connectDB();
@@ -38,6 +39,7 @@ app.use("/api/v1/upload", uploadRoute);
 app.use("/api/v1/notification", notificationRoute);
 app.use("/api/v1/message", messageRoute);
 app.use("/api/v1/chat", chatRoute);
+app.use("/api/v1/location", locationRoute);
 
 app.use(errorHandler);
 
