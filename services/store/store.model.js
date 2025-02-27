@@ -241,6 +241,12 @@ var ratingSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+var categorySchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    store: { type: mongoose.Schema.Types.ObjectId, ref: "Store", required: true },
+    dishes: [{ type: mongoose.Schema.Types.ObjectId, ref: "Dish" }]
+});
+
 // Method to calculate average rating for a dish
 ratingSchema.statics.getAverageRating = async function (dishId) {
     const result = await this.aggregate([
@@ -266,5 +272,6 @@ module.exports = {
     ToppingGroup: mongoose.model("ToppingGroup", toppingGroupSchema),
     Staff: mongoose.model("Staff", staffSchema),
     Order: mongoose.model("Order", orderSchema),
-    Rating: mongoose.model("Rating", ratingSchema)
+    Rating: mongoose.model("Rating", ratingSchema),
+    Category: mongoose.model("Category", categorySchema)
 };

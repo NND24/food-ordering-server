@@ -1,22 +1,23 @@
-const { Store, Dish, ToppingGroup, Staff, Order, Rating } = require("./store.model");
+const { Store, Dish, ToppingGroup, Staff, Order, Rating, Category } = require("./store.model");
 const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 const { query } = require("express");
+const mongoose = require("mongoose");
 
-// THIS FUNCTION IS MADE TO OPTIMIZE THE PAGING
+// THIS FUNCTION IS MADE TO OPTIMIZE THE PAGING BUT PENDING
 const fetchPaginatedData = async (Model, query, page, limit, populateFields = []) => {
     const totalItems = await Model.countDocuments(query);
     const totalPages = Math.ceil(totalItems / limit);
     const currentPage = Math.min(page, totalPages);
-    
+
     const dataQuery = Model.find(query)
         .skip((currentPage - 1) * limit)
         .limit(limit);
-    
+
     if (populateFields.length) {
         populateFields.forEach(field => dataQuery.populate(field));
     }
-    
+
     const results = await dataQuery;
     return { totalItems, totalPages, currentPage, results };
 };
@@ -205,13 +206,13 @@ const getAllCategory = async (req, res) => {
         if (!categorys || categorys.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: "Topping not found",
+                message: "Category not found",
             });
         }
 
         res.status(200).json({
             success: true,
-            total: totalTopping,
+            total: totalCategory,
             totalPages,
             currentPage: page,
             pageSize,
@@ -295,7 +296,7 @@ const getAllStaff = async (req, res) => {
 // [GET] /[store_id]/order/page/[no]?status=[status]
 const getAllOrder = async (req, res) => {
     try {
-        const { store_id, no } = req.params; 
+        const { store_id, no } = req.params;
         const { status } = req.query;
         const pageSize = 10; // Số món ăn trên mỗi trang
         const page = parseInt(no);
@@ -347,13 +348,13 @@ const getAllOrder = async (req, res) => {
             res.status(500).json({ success: false, message: error.message });
         }
     }
-    
+
 }
 
 // [GET] /order/[order_id]
 const getOrder = async (req, res) => {
     try {
-        const { order_id } = req.params; 
+        const { order_id } = req.params;
 
         // Truy vấn danh sách món ăn
         const order = await Order.findById(order_id)
@@ -385,7 +386,7 @@ const getOrder = async (req, res) => {
 // [GET] /dish/[dish_id]
 const getDish = async (req, res) => {
     try {
-        const { dish_id } = req.params; 
+        const { dish_id } = req.params;
 
         // Truy vấn danh sách món ăn
         const dish = await Dish.findById(dish_id)
@@ -416,7 +417,7 @@ const getDish = async (req, res) => {
 
 const getTopping = async (req, res) => {
     try {
-        const { group_id } = req.params; 
+        const { group_id } = req.params;
 
         // Truy vấn danh sách món ăn
         const toppingGroup = await ToppingGroup.findById(group_id)
@@ -447,7 +448,7 @@ const getTopping = async (req, res) => {
 
 const getCategory = async (req, res) => {
     try {
-        const { category_id } = req.params; 
+        const { category_id } = req.params;
 
         // Truy vấn danh sách món ăn
         const category = await Category.findById(category_id)
@@ -478,7 +479,7 @@ const getCategory = async (req, res) => {
 
 const getStaff = async (req, res) => {
     try {
-        const { staff_id } = req.params; 
+        const { staff_id } = req.params;
 
         // Truy vấn danh sách món ăn
         const staff = await Staff.findById(staff_id)
@@ -507,43 +508,43 @@ const getStaff = async (req, res) => {
     }
 }
 
-const getRating = async (req, res) => {
+// const getRating = async (req, res) => {
+//     try {
+//         const { dish_id } = req.params;
+
+//         // Truy vấn danh sách món ăn
+//         const reviews = await Rating.find({ dish: dish_id }).populate("user");
+
+//         if (!reviews) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Reviews not found",
+//             });
+//         }
+
+//         res.status(200).json({
+//             success: true,
+//             data: reviews,
+//         });
+//     } catch (error) {
+//         if (error.name === "CastError") {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Invalid format",
+//             });
+//         }
+//         else {
+//             res.status(500).json({ success: false, message: error.message });
+//         }
+//     }
+// }
+
+const getAvgRating = async (req, res) => {
     try {
-        const { dish_id } = req.params; 
-
+        const { dish_id } = req.params;
+        const objectId = new mongoose.Types.ObjectId(dish_id);
         // Truy vấn danh sách món ăn
-        const reviews = await Rating.find({dish:{dish_id}}).populate("user");
-
-        if (!reviews) {
-            return res.status(404).json({
-                success: false,
-                message: "Reviews not found",
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            data: reviews,
-        });
-    } catch (error) {
-        if (error.name === "CastError") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid format",
-            });
-        }
-        else {
-            res.status(500).json({ success: false, message: error.message });
-        }
-    }
-}
-
-const getAvgRating = async (req, res) =>{
-    try {
-        const { dish_id } = req.params; 
-
-        // Truy vấn danh sách món ăn
-        const points = await Rating.getAvgRating(dish_id)
+        const points = await Rating.getAverageRating(objectId)
 
         if (!points) {
             return res.status(404).json({
@@ -569,12 +570,95 @@ const getAvgRating = async (req, res) =>{
     }
 }
 
-// const getAllRatting = async (req, res) =>? {
+const getAllRating = async (req, res) => {
+    try {
+        const { dish_id, no } = req.params; // Lấy store_id và số trang từ URL
 
-// }
+        const pageSize = 10; // Số món ăn trên mỗi trang
+        const page = parseInt(no);
+
+        if (page < 1) {
+            return res.status(400).json({ success: false, message: "Invalid page number" });
+        }
+
+        // Tạo bộ lọc tìm kiếm
+        let filter = { dish: dish_id };
 
 
-module.exports = { getAllDish, getStoreInformation, 
-    getAllTopping, getAllCategory, getAllStaff, getOrder, 
-    getAllOrder, getDish, getTopping , getCategory, getStaff,
-    getRating, getAvgRating,};
+        // Đếm tổng số món ăn theo filter
+        const totalRating = await Rating.countDocuments(filter);
+        const totalPages = Math.ceil(totalRating / pageSize); // Tính tổng số trang
+
+        // Nếu số trang yêu cầu lớn hơn tổng số trang -> trả về trang cuối cùng
+        const skip = (page - 1) * pageSize;
+
+        // Truy vấn danh sách món ăn
+        const ratings = await Rating.find(filter)
+            .skip(skip)
+            .limit(pageSize);
+        if (!ratings || ratings.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Rating not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            total: totalRating,
+            totalPages,
+            currentPage: page,
+            pageSize,
+            data: ratings,
+        });
+    } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid store ID format",
+            });
+        }
+        else {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+}
+
+const getAvgStoreRating = async (req, res) => {
+    try {
+        const { store_id } = req.params;
+        const objectId = new mongoose.Types.ObjectId(store_id);
+        // Truy vấn danh sách món ăn
+        const points = await Rating.getStoreRatingSummary(objectId)
+
+        if (!points) {
+            return res.status(404).json({
+                success: false,
+                message: "Reviews not found for calculate",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: points,
+        });
+    } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid format",
+            });
+        }
+        else {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+}
+
+
+module.exports = {
+    getAllDish, getStoreInformation,
+    getAllTopping, getAllCategory, getAllStaff, getOrder,
+    getAllOrder, getDish, getTopping, getCategory, getStaff,
+    getAvgRating, getAllRating, getAvgStoreRating
+};

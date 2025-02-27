@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { Dish, Store, ToppingGroup, Staff, Order, Rating } = require("./services/store/store.model"); // Ensure correct path
+const { Dish, Store, ToppingGroup, Staff, Order, Rating, Category } = require("./services/store/store.model");
 const connectDB = require("./config/connectDB");
 require("dotenv").config();
 
@@ -7,7 +7,7 @@ const storeOwnerId = new mongoose.Types.ObjectId("67ba0ddde145d9ad24039666");
 
 async function resetAndSeedData() {
     try {
-        await connectDB(); // Ensure DB connection
+        await connectDB();
 
         // Delete all previous data
         await Store.deleteMany({});
@@ -16,6 +16,7 @@ async function resetAndSeedData() {
         await Staff.deleteMany({});
         await Order.deleteMany({});
         await Rating.deleteMany({});
+        await Category.deleteMany({}); // Delete existing categories
 
         console.log("Previous data deleted.");
 
@@ -32,9 +33,9 @@ async function resetAndSeedData() {
             },
         });
 
-        // Insert Categories
-        const category1 = new mongoose.Types.ObjectId();
-        const category2 = new mongoose.Types.ObjectId();
+        // Insert Categories with store reference
+        const category1 = await Category.create({ name: "Burgers", store: store._id, dishes: [] });
+        const category2 = await Category.create({ name: "Vegetarian", store: store._id, dishes: [] });
 
         // Insert Topping Groups
         const toppingGroup1 = await ToppingGroup.create({
@@ -55,11 +56,11 @@ async function resetAndSeedData() {
             toppings: [{ name: "Lettuce", price: 0.5 }, { name: "Tomato", price: 0.7 }]
         });
 
-        // Insert Dishes
+        // Insert Dishes and assign categories
         const dish1 = await Dish.create({
             name: "Cheeseburger",
             price: 5.99,
-            category: category1,
+            category: category1._id,
             store: store._id,
             image: { url: "cheeseburger.jpg", filePath: "/uploads/cheeseburger.jpg" },
             toppingGroups: [toppingGroup1._id, toppingGroup2._id]
@@ -68,11 +69,15 @@ async function resetAndSeedData() {
         const dish2 = await Dish.create({
             name: "Veggie Burger",
             price: 6.99,
-            category: category2,
+            category: category2._id,
             store: store._id,
             image: { url: "veggieburger.jpg", filePath: "/uploads/veggieburger.jpg" },
             toppingGroups: [toppingGroup3._id]
         });
+
+        // Update categories to include dishes
+        await Category.findByIdAndUpdate(category1._id, { $push: { dishes: dish1._id } });
+        await Category.findByIdAndUpdate(category2._id, { $push: { dishes: dish2._id } });
 
         // Insert Staff
         await Staff.create([
@@ -80,7 +85,7 @@ async function resetAndSeedData() {
             { name: "Bob", role: "staff", store: store._id, contact: { phone: "0987654321", email: "bob@example.com" } }
         ]);
 
-        // Insert Orders with different statuses
+        // Insert Orders
         const statuses = ["preorder", "pending", "confirmed", "preparing", "finished", "delivered", "cancelled"];
         const orders = statuses.map(status => ({
             customer: new mongoose.Types.ObjectId(),
