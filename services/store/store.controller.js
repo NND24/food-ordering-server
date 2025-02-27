@@ -1,12 +1,27 @@
-const Store = require("./store.model");
+const { Store, Dish, ToppingGroup, Staff, Order, Rating } = require("./store.model");
 const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 const { query } = require("express");
 
-const Dish = require("../models/dish"); // Import model Dish
+// THIS FUNCTION IS MADE TO OPTIMIZE THE PAGING
+const fetchPaginatedData = async (Model, query, page, limit, populateFields = []) => {
+    const totalItems = await Model.countDocuments(query);
+    const totalPages = Math.ceil(totalItems / limit);
+    const currentPage = Math.min(page, totalPages);
+    
+    const dataQuery = Model.find(query)
+        .skip((currentPage - 1) * limit)
+        .limit(limit);
+    
+    if (populateFields.length) {
+        populateFields.forEach(field => dataQuery.populate(field));
+    }
+    
+    const results = await dataQuery;
+    return { totalItems, totalPages, currentPage, results };
+};
 
-
-// [GET] api/store/[store_id]/dish/page/[no]?name=[name]&category=[category]
+// [GET] /[store_id]/dish/page/[no]?name=[name]&category=[category]
 const getAllDish = async (req, res) => {
     try {
         const { store_id, no } = req.params; // Lấy store_id và số trang từ URL
@@ -67,7 +82,7 @@ const getAllDish = async (req, res) => {
         }
     }
 };
-// [GET] api/store/[store_id]
+// [GET] /[store_id]
 const getStoreInformation = async (req, res) => {
     try {
         const { store_id } = req.params; // Extract store_id correctly
@@ -97,11 +112,11 @@ const getStoreInformation = async (req, res) => {
 
         res.status(500).json({
             success: false,
-            message: "Internal server error",
+            message: error.message,
         });
     }
 };
-// [GET] api/store/[store_id]/topping/page/[no]
+// [GET] /[store_id]/topping/page/[no]
 const getAllTopping = async (req, res) => {
     try {
         const { store_id, no } = req.params; // Lấy store_id và số trang từ URL
@@ -119,7 +134,7 @@ const getAllTopping = async (req, res) => {
 
         // Đếm tổng số món ăn theo filter
         const totalTopping = await ToppingGroup.countDocuments(filter);
-        const totalPages = Math.ceil(totalDishes / pageSize); // Tính tổng số trang
+        const totalPages = Math.ceil(totalTopping / pageSize); // Tính tổng số trang
 
         // Nếu số trang yêu cầu lớn hơn tổng số trang -> trả về trang cuối cùng
         const skip = (page - 1) * pageSize;
@@ -157,7 +172,7 @@ const getAllTopping = async (req, res) => {
 };
 
 
-// [GET] api/store/[store_id]/category/page/[no]?name=[name]
+// [GET] /[store_id]/category/page/[no]?name=[name]
 const getAllCategory = async (req, res) => {
     try {
         const { store_id, no } = req.params; // Lấy store_id và số trang từ URL
@@ -177,7 +192,7 @@ const getAllCategory = async (req, res) => {
 
         // Đếm tổng số món ăn theo filter
         const totalCategory = await Category.countDocuments(filter);
-        const totalPages = Math.ceil(totalDishes / pageSize); // Tính tổng số trang
+        const totalPages = Math.ceil(totalCategory / pageSize); // Tính tổng số trang
 
         // Nếu số trang yêu cầu lớn hơn tổng số trang -> trả về trang cuối cùng
         const skip = (page - 1) * pageSize;
@@ -187,7 +202,7 @@ const getAllCategory = async (req, res) => {
             .populate("name")
             .skip(skip)
             .limit(pageSize);
-        if (!toppings || toppings.length === 0) {
+        if (!categorys || categorys.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: "Topping not found",
@@ -200,7 +215,7 @@ const getAllCategory = async (req, res) => {
             totalPages,
             currentPage: page,
             pageSize,
-            data: toppings,
+            data: categorys,
         });
     } catch (error) {
         if (error.name === "CastError") {
@@ -216,4 +231,350 @@ const getAllCategory = async (req, res) => {
 };
 
 
-module.exports = { getAllDish, getStoreInformation, getAllTopping };
+// [GET] /[store_id]/staff/page/[no]?name=[name]&role=[role]
+const getAllStaff = async (req, res) => {
+    try {
+        const { store_id, no } = req.params; // Lấy store_id và số trang từ URL
+        const { name, role } = req.query;
+        const pageSize = 10; // Số món ăn trên mỗi trang
+        const page = parseInt(no);
+
+        if (page < 1) {
+            return res.status(400).json({ success: false, message: "Invalid page number" });
+        }
+
+        // Tạo bộ lọc tìm kiếm
+        let filter = { store: store_id };
+        if (name) {
+            filter.name = { $regex: name, $options: "i" };
+        }
+        if (role) {
+            filter.role = role; // Lọc theo role
+        }
+
+        // Đếm tổng số món ăn theo filter
+        const totalStaff = await Staff.countDocuments(filter);
+        const totalPages = Math.ceil(totalStaff / pageSize); // Tính tổng số trang
+
+        // Nếu số trang yêu cầu lớn hơn tổng số trang -> trả về trang cuối cùng
+        const skip = (page - 1) * pageSize;
+
+        // Truy vấn danh sách món ăn
+        const staffs = await Staff.find(filter)
+            .populate("name")
+            .skip(skip)
+            .limit(pageSize);
+        if (!staffs || staffs.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Staffs not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            total: totalStaff,
+            totalPages,
+            currentPage: page,
+            pageSize,
+            data: staffs,
+        });
+    } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid store ID format",
+            });
+        }
+        else {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+};
+
+// [GET] /[store_id]/order/page/[no]?status=[status]
+const getAllOrder = async (req, res) => {
+    try {
+        const { store_id, no } = req.params; 
+        const { status } = req.query;
+        const pageSize = 10; // Số món ăn trên mỗi trang
+        const page = parseInt(no);
+
+        if (page < 1) {
+            return res.status(400).json({ success: false, message: "Invalid page number" });
+        }
+
+        // Tạo bộ lọc tìm kiếm
+        let filter = { store: store_id };
+        if (status) {
+            filter.status = status
+        }
+        // Đếm tổng số món ăn theo filter
+        const totalOrder = await Order.countDocuments(filter);
+        const totalPages = Math.ceil(totalOrder / pageSize); // Tính tổng số trang
+
+        // Nếu số trang yêu cầu lớn hơn tổng số trang -> trả về trang cuối cùng
+        const skip = (page - 1) * pageSize;
+
+        // Truy vấn danh sách món ăn
+        const orders = await Order.find(filter)
+            .skip(skip)
+            .limit(pageSize);
+        if (!orders || orders.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            total: totalOrder,
+            totalPages,
+            currentPage: page,
+            pageSize,
+            data: orders,
+        });
+
+    } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid store ID format",
+            });
+        }
+        else {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+    
+}
+
+// [GET] /order/[order_id]
+const getOrder = async (req, res) => {
+    try {
+        const { order_id } = req.params; 
+
+        // Truy vấn danh sách món ăn
+        const order = await Order.findById(order_id)
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: order,
+        });
+    } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid store ID format",
+            });
+        }
+        else {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+}
+
+// [GET] /dish/[dish_id]
+const getDish = async (req, res) => {
+    try {
+        const { dish_id } = req.params; 
+
+        // Truy vấn danh sách món ăn
+        const dish = await Dish.findById(dish_id)
+
+        if (!dish) {
+            return res.status(404).json({
+                success: false,
+                message: "Dish not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: dish,
+        });
+    } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid format",
+            });
+        }
+        else {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+}
+
+const getTopping = async (req, res) => {
+    try {
+        const { group_id } = req.params; 
+
+        // Truy vấn danh sách món ăn
+        const toppingGroup = await ToppingGroup.findById(group_id)
+
+        if (!toppingGroup) {
+            return res.status(404).json({
+                success: false,
+                message: "Topping group not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: toppingGroup,
+        });
+    } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid format",
+            });
+        }
+        else {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+}
+
+const getCategory = async (req, res) => {
+    try {
+        const { category_id } = req.params; 
+
+        // Truy vấn danh sách món ăn
+        const category = await Category.findById(category_id)
+
+        if (!category) {
+            return res.status(404).json({
+                success: false,
+                message: "Topping group not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: category,
+        });
+    } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid format",
+            });
+        }
+        else {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+}
+
+const getStaff = async (req, res) => {
+    try {
+        const { staff_id } = req.params; 
+
+        // Truy vấn danh sách món ăn
+        const staff = await Staff.findById(staff_id)
+
+        if (!staff) {
+            return res.status(404).json({
+                success: false,
+                message: "Staff not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: staff,
+        });
+    } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid format",
+            });
+        }
+        else {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+}
+
+const getRating = async (req, res) => {
+    try {
+        const { dish_id } = req.params; 
+
+        // Truy vấn danh sách món ăn
+        const reviews = await Rating.find({dish:{dish_id}}).populate("user");
+
+        if (!reviews) {
+            return res.status(404).json({
+                success: false,
+                message: "Reviews not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: reviews,
+        });
+    } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid format",
+            });
+        }
+        else {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+}
+
+const getAvgRating = async (req, res) =>{
+    try {
+        const { dish_id } = req.params; 
+
+        // Truy vấn danh sách món ăn
+        const points = await Rating.getAvgRating(dish_id)
+
+        if (!points) {
+            return res.status(404).json({
+                success: false,
+                message: "Reviews not found for calculate",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: points,
+        });
+    } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid format",
+            });
+        }
+        else {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+}
+
+// const getAllRatting = async (req, res) =>? {
+
+// }
+
+
+module.exports = { getAllDish, getStoreInformation, 
+    getAllTopping, getAllCategory, getAllStaff, getOrder, 
+    getAllOrder, getDish, getTopping , getCategory, getStaff,
+    getRating, getAvgRating,};

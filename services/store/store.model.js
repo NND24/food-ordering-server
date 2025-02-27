@@ -25,9 +25,16 @@ var dishSchema = new mongoose.Schema(
             url: String,
             filePath: String,
         },
+        toppingGroups: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "ToppingGroup", // Reference the ToppingGroup model
+            }
+        ],
     },
     { timestamps: true }
 );
+
 
 // Store Schema
 var storeSchema = new mongoose.Schema(
@@ -203,6 +210,55 @@ var orderSchema = new mongoose.Schema(
 );
 
 
+var ratingSchema = new mongoose.Schema(
+    {
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+        },
+        dish: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Dish",
+            required: true,
+        },
+        store: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Store",
+            required: true,
+        },
+        ratingValue: {
+            type: Number,
+            required: true,
+            min: 1,
+            max: 5, // 1-5 star rating system
+        },
+        comment: {
+            type: String,
+            default: "", // Empty string if no comment
+        },
+    },
+    { timestamps: true }
+);
+
+// Method to calculate average rating for a dish
+ratingSchema.statics.getAverageRating = async function (dishId) {
+    const result = await this.aggregate([
+        { $match: { dish: dishId } },
+        { $group: { _id: "$dish", avgRating: { $avg: "$ratingValue" }, count: { $sum: 1 } } },
+    ]);
+    return result.length > 0 ? result[0] : { avgRating: 0, count: 0 };
+};
+
+// Method to calculate average rating for a store
+ratingSchema.statics.getStoreRatingSummary = async function (storeId) {
+    const result = await this.aggregate([
+        { $match: { store: storeId } },
+        { $group: { _id: "$store", avgRating: { $avg: "$ratingValue" }, count: { $sum: 1 } } },
+    ]);
+    return result.length > 0 ? result[0] : { avgRating: 0, count: 0 };
+};
+
 
 module.exports = {
     Dish: mongoose.model("Dish", dishSchema),
@@ -210,4 +266,5 @@ module.exports = {
     ToppingGroup: mongoose.model("ToppingGroup", toppingGroupSchema),
     Staff: mongoose.model("Staff", staffSchema),
     Order: mongoose.model("Order", orderSchema),
+    Rating: mongoose.model("Rating", ratingSchema)
 };
