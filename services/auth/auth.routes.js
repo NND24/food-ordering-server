@@ -10,6 +10,7 @@ const {
   forgotPassword,
   checkOTP,
   googleLoginWithToken,
+  loginWithGoogleMobile,
 } = require("./auth.controller");
 
 const router = express.Router();
@@ -17,10 +18,11 @@ const router = express.Router();
 router.post("/register", register);
 router.post("/login", login);
 router.post("/login/google", googleLoginWithToken);
+router.post("/login/google/mobile", loginWithGoogleMobile);
 router.post("/forgot-password", forgotPassword);
 router.post("/check-otp", checkOTP);
+router.post("/logout", logout);
 
-router.get("/logout", logout);
 router.get("/refresh", getRefreshToken);
 
 router.put("/change-password", authMiddleware, changePassword);

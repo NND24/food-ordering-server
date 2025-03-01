@@ -24,7 +24,7 @@ connectDB();
 app.use(morgan("dev"));
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: "*",
     credentials: true,
   })
 );
@@ -46,7 +46,7 @@ app.use(errorHandler);
 PORT = process.env.PORT || 5000;
 
 const server = http.createServer(app);
-const io = socketIo(server, { cors: { origin: "http://localhost:3000" } });
+const io = socketIo(server, { cors: { origin: "*" } });
 
 const userSockets = {};
 
@@ -113,6 +113,6 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
