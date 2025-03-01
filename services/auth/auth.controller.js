@@ -7,11 +7,11 @@ const { OAuth2Client } = require("google-auth-library");
 const sendEmail = require("../../utils/sendEmail");
 
 const generateAccessToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "3d" });
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1d" });
 };
 
 const generateRefreshToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, { expiresIn: "5d" });
+  return jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, { expiresIn: "30d" });
 };
 
 const register = asyncHandler(async (req, res, next) => {
@@ -40,7 +40,7 @@ const login = asyncHandler(async (req, res, next) => {
 
   const findUser = await User.findOne({ email: email });
   if (findUser && (await findUser.isPasswordMatched(password))) {
-    const refreshToken = await generateRefreshToken(findUser._id);
+    const refreshToken = generateRefreshToken(findUser._id);
     await User.findByIdAndUpdate(
       findUser._id,
       {
@@ -49,7 +49,7 @@ const login = asyncHandler(async (req, res, next) => {
       { new: true }
     );
     res.cookie("refreshToken", refreshToken, {
-      maxAge: 5 * 24 * 60 * 60 * 1000,
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
     res.status(200).json({
       _id: findUser?._id,
@@ -65,6 +65,7 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const googleLoginWithToken = asyncHandler(async (req, res, next) => {
   try {
     const { token } = req.body;
+    console.log(token);
     if (!token) return res.status(400).json({ error: "No token provided" });
 
     const ticket = await client.verifyIdToken({
@@ -90,12 +91,94 @@ const googleLoginWithToken = asyncHandler(async (req, res, next) => {
       });
       await newUser.save();
 
+      const refreshToken = generateRefreshToken(newUser._id);
+      await User.findByIdAndUpdate(
+        newUser._id,
+        {
+          refreshToken: refreshToken,
+        },
+        { new: true }
+      );
+      res.cookie("refreshToken", refreshToken, {
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      });
+
       res.status(200).json({
         _id: newUser?._id,
         token: generateAccessToken(newUser?._id),
       });
     } else {
       if (user.isGoogleLogin) {
+        const refreshToken = generateRefreshToken(user._id);
+        await User.findByIdAndUpdate(
+          user._id,
+          {
+            refreshToken: refreshToken,
+          },
+          { new: true }
+        );
+        res.cookie("refreshToken", refreshToken, {
+          maxAge: 30 * 24 * 60 * 60 * 1000,
+        });
+
+        res.status(200).json({
+          _id: user?._id,
+          token: generateAccessToken(user?._id),
+        });
+      } else {
+        next(createError(409, "Tài khoản đã tồn tại"));
+      }
+    }
+  } catch (error) {
+    console.log(error);
+    return next(createError(500, "Google authentication failed!"));
+  }
+});
+
+const loginWithGoogleMobile = asyncHandler(async (req, res, next) => {
+  try {
+    const { name, email } = req.body;
+
+    // Kiểm tra xem user đã tồn tại chưa
+    let user = await User.findOne({ email });
+    if (!user) {
+      newUser = new User({
+        name: name,
+        email: email,
+        password: "123456789",
+        isGoogleLogin: true,
+      });
+      await newUser.save();
+
+      const refreshToken = generateRefreshToken(newUser._id);
+      await User.findByIdAndUpdate(
+        newUser._id,
+        {
+          refreshToken: refreshToken,
+        },
+        { new: true }
+      );
+      res.cookie("refreshToken", refreshToken, {
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      });
+
+      res.status(200).json({
+        _id: newUser?._id,
+        token: generateAccessToken(newUser?._id),
+      });
+    } else {
+      if (user.isGoogleLogin) {
+        const refreshToken = generateRefreshToken(user._id);
+        await User.findByIdAndUpdate(
+          user._id,
+          {
+            refreshToken: refreshToken,
+          },
+          { new: true }
+        );
+        res.cookie("refreshToken", refreshToken, {
+          maxAge: 30 * 24 * 60 * 60 * 1000,
+        });
         res.status(200).json({
           _id: user?._id,
           token: generateAccessToken(user?._id),
@@ -144,7 +227,7 @@ const logout = asyncHandler(async (req, res, next) => {
     secure: true,
     sameSite: "Strict",
   });
-  res.status(200).json({ message: "Logout successful" });
+  res.status(200).json("Logout successful");
 });
 
 const changePassword = asyncHandler(async (req, res) => {
@@ -220,6 +303,7 @@ module.exports = {
   register,
   login,
   googleLoginWithToken,
+  loginWithGoogleMobile,
   getRefreshToken,
   logout,
   changePassword,

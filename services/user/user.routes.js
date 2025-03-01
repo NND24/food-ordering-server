@@ -5,7 +5,7 @@ const { getAllUser, getUser, updateUser, deleteUser } = require("./user.controll
 
 const router = express.Router();
 
-router.get("/", authMiddleware, getAllUser);
+router.get("/", getAllUser);
 router.get("/:id", validateMongoDbId("id"), getUser);
 
 router.put("/", authMiddleware, updateUser);

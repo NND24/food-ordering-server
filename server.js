@@ -16,14 +16,16 @@ const uploadRoute = require("./services/upload/upload.routes");
 const notificationRoute = require("./services/notification/notification.routes");
 const messageRoute = require("./services/message/message.routes");
 const chatRoute = require("./services/chat/chat.routes");
-const storeRoute = require("./services/store/store.routes")
+const storeRoute = require("./services/store/store.routes");
+const locationRoute = require("./services/location/location.routes");
+
 const app = express();
 connectDB();
 
 app.use(morgan("dev"));
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: "*",
     credentials: true,
   })
 );
@@ -38,14 +40,15 @@ app.use("/api/v1/upload", uploadRoute);
 app.use("/api/v1/notification", notificationRoute);
 app.use("/api/v1/message", messageRoute);
 app.use("/api/v1/chat", chatRoute);
-app.use("/api/v1/store", storeRoute)
+app.use("/api/v1/store", storeRoute);
+app.use("/api/v1/location", locationRoute);
 
 app.use(errorHandler);
 
 PORT = process.env.PORT || 5000;
 
 const server = http.createServer(app);
-const io = socketIo(server, { cors: { origin: "http://localhost:3000" } });
+const io = socketIo(server, { cors: { origin: "*" } });
 
 const userSockets = {};
 
@@ -112,6 +115,6 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
