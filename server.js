@@ -18,6 +18,8 @@ const messageRoute = require("./services/message/message.routes");
 const chatRoute = require("./services/chat/chat.routes");
 const storeRoute = require("./services/store/store.routes");
 const locationRoute = require("./services/location/location.routes");
+const cartRoute = require("./services/cart/cart.routes");
+const favoriteRoute = require("./services/favorite/favorite.routes")
 
 const app = express();
 connectDB();
@@ -42,6 +44,8 @@ app.use("/api/v1/message", messageRoute);
 app.use("/api/v1/chat", chatRoute);
 app.use("/api/v1/store", storeRoute);
 app.use("/api/v1/location", locationRoute);
+app.use("/api/v1/cart", cartRoute)
+app.use("/api/v1/favorite", favoriteRoute)
 
 app.use(errorHandler);
 

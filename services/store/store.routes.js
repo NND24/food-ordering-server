@@ -12,7 +12,6 @@ const {
   getTopping,
   getCategory,
   getStaff,
-  getRating,
   getAvgRating,
   getAllRating,
   getAvgStoreRating,
