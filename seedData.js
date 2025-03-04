@@ -106,7 +106,8 @@ async function resetAndSeedData() {
             items: [{ dish: dish1._id, quantity: 1, toppings: [topping1Id] }],
             shipLocation: {
                 type: "Point",
-                coordinates: [-74.0059, 40.7127] // New York City (longitude, latitude)
+                coordinates: [-74.0059, 40.7127], // New York City (longitude, latitude)
+                address: "123 Sth Streets"
             },
             status: "pending",
             paymentMethod: "cash"
@@ -118,7 +119,8 @@ async function resetAndSeedData() {
             items: [{ dish: dish2._id, quantity: 2, toppings: [topping2Id] }],
             shipLocation: {
                 type: "Point",
-                coordinates: [-74.015, 40.722] // Another NYC location
+                coordinates: [-74.015, 40.722], // Another NYC location
+                address: "123 Sth Streets"
             },
             status: "confirmed",
             paymentMethod: "credit_card"

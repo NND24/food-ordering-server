@@ -41,6 +41,10 @@ var orderSchema = new mongoose.Schema(
                 type: [Number], // Array with [longitude, latitude]
                 required: true,
             },
+            address: {
+                type: String,
+                require: true
+            }
         },
         status: {
             type: String,
