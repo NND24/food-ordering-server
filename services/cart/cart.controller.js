@@ -3,8 +3,9 @@ const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 const { query } = require("express");
 const mongoose = require("mongoose");
-const { Dish } = require("../store/store.model");
+const { Dish, ToppingGroup } = require("../store/store.model");
 const { Order } = require("../order/order.model")
+
 
 // [GET] /#
 const getUserCart = async (req, res) => {
@@ -57,7 +58,7 @@ const increaseQuantity = async (req, res) => {
         }
         // Check if the dish belong to that store
         let dish = await Dish.findById(dishId)
-        if (!dish) {         
+        if (!dish) {
             return res.status(400).json({
                 success: false,
                 message: "Dish not exsited in system",
@@ -132,7 +133,7 @@ const decreaseQuantity = async (req, res) => {
         }
         // Check if the dish belong to that store
         let dish = await Dish.findById(dishId)
-        if (!dish) {         
+        if (!dish) {
             return res.status(400).json({
                 success: false,
                 message: "Dish not exsited in system",
@@ -187,6 +188,105 @@ const decreaseQuantity = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "Item quantity decreased",
+            data: cart,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const updateCart = async (req, res) => {
+    try {
+        const userId = req?.user?._id;
+        const { storeId, dishId, quantity, toppings = [] } = req.body;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+        if (!storeId || !dishId || !quantity) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid request body",
+            });
+        }
+
+        // Check if the dish belongs to the store
+        let dish = await Dish.findById(dishId);
+        if (!dish) {
+            return res.status(400).json({
+                success: false,
+                message: "Dish not existed in system",
+            });
+        }
+        if (dish.store._id.toString() !== storeId) {
+            return res.status(400).json({
+                success: false,
+                message: "Dish not existed in the store",
+            });
+        }
+
+        // Validate toppings
+        if (toppings.length > 0) {
+            let toppingGroups = await ToppingGroup.find({ store: storeId });
+
+            let validToppings = new Set();
+            toppingGroups.forEach(group => {
+                group.toppings.forEach(topping => {
+                    validToppings.add(topping._id.toString());
+                });
+            });
+
+            let invalidToppings = toppings.filter(toppingId => !validToppings.has(toppingId));
+
+            if (invalidToppings.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Some toppings are not valid for this store",
+                    invalidToppings,
+                });
+            }
+        }
+
+        // Check if cart exists for the user
+        let cart = await Cart.findOne({ user: userId, store: storeId });
+
+        if (!cart) {
+            // Create a new cart with the item
+            cart = await Cart.create({
+                user: userId,
+                store: storeId,
+                items: [{ dish: dishId, quantity: quantity, topping: toppings }]
+            });
+
+            return res.status(201).json({
+                success: true,
+                message: "New cart created with item",
+                data: cart,
+            });
+        }
+
+        // Check if the item already exists in the cart
+        let itemIndex = cart.items.findIndex(item => item.dish.toString() === dishId);
+
+        if (itemIndex > -1) {
+            // Item exists, update the cart
+            cart.items[itemIndex].quantity = quantity;
+            cart.items[itemIndex].topping = toppings;
+        } else {
+            // Item does not exist, add new item
+            cart.items.push({ dish: dishId, quantity: quantity, topping: toppings });
+        }
+
+        // Save the updated cart
+        await cart.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Cart updated successfully",
             data: cart,
         });
     } catch (error) {
@@ -285,9 +385,9 @@ const completeCart = async (req, res) => {
             store: storeId,
             items: cart.items, // Copy cart items to order
             totalPrice: cart.totalPrice,
-            shipLocation:{
+            shipLocation: {
                 type: "Point",
-                coordinates : location,
+                coordinates: location,
                 address: deliveryAddress
             },
             status: "pending", // Default status for a new order
@@ -313,4 +413,7 @@ const completeCart = async (req, res) => {
 
 
 
-module.exports = { getUserCart, increaseQuantity, decreaseQuantity, clearItem, clearCart, completeCart };
+module.exports = {
+    getUserCart, increaseQuantity, decreaseQuantity,
+    clearItem, clearCart, completeCart, updateCart
+};
