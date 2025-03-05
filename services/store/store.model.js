@@ -92,51 +92,6 @@ var toppingGroupSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Order Schema
-var orderSchema = new mongoose.Schema(
-    {
-        customer: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
-        },
-        store: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Store",
-            required: true,
-        },
-        items: [
-            {
-                dish: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: "Dish",
-                },
-                quantity: {
-                    type: Number,
-                    required: true,
-                },
-                toppings: [{
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: "Topping",
-                }],
-            },
-        ],
-        totalAmount: {
-            type: Number,
-            required: true,
-        },
-        status: {
-            type: String,
-            enum: ["preorder", "pending", "confirmed", "preparing", "finished", "taken" ,"delivered", "cancelled"],
-            default: "pending",
-        },
-        paymentMethod: {
-            type: String,
-            enum: ["cash", "bank_transfer"],
-        },
-    },
-    { timestamps: true }
-);
 
 // Staff Schema
 var staffSchema = new mongoose.Schema(
@@ -163,51 +118,7 @@ var staffSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Order Schema
-var orderSchema = new mongoose.Schema(
-    {
-        customer: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
-        },
-        store: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Store",
-            required: true,
-        },
-        items: [
-            {
-                dish: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: "Dish",
-                },
-                quantity: {
-                    type: Number,
-                    required: true,
-                },
-                toppings: [{
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: "Topping",
-                }],
-            },
-        ],
-        totalAmount: {
-            type: Number,
-            required: true,
-        },
-        status: {
-            type: String,
-            enum: ["preorder", "pending", "confirmed", "preparing", "finished", "delivered", "cancelled"],
-            default: "pending",
-        },
-        paymentMethod: {
-            type: String,
-            enum: ["cash", "credit_card"],
-        },
-    },
-    { timestamps: true }
-);
+
 
 
 var ratingSchema = new mongoose.Schema(
@@ -271,7 +182,6 @@ module.exports = {
     Store: mongoose.model("Store", storeSchema),
     ToppingGroup: mongoose.model("ToppingGroup", toppingGroupSchema),
     Staff: mongoose.model("Staff", staffSchema),
-    Order: mongoose.model("Order", orderSchema),
     Rating: mongoose.model("Rating", ratingSchema),
     Category: mongoose.model("Category", categorySchema)
 };

@@ -1,4 +1,5 @@
-const { Store, Dish, ToppingGroup, Staff, Order, Rating, Category } = require("./store.model");
+const { Store, Dish, ToppingGroup, Staff, Rating, Category } = require("./store.model");
+const { Order } = require("../order/order.model")
 const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 const { query } = require("express");
