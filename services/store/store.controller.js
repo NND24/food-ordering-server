@@ -692,6 +692,230 @@ const getToppingFromDish = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }    
 }
+const createToppingGroup = async (req, res) => {
+    try {
+        const { store_id } = req.params;
+        const { name, toppings } = req.body;
+
+        // Validate store_id
+        const store = await Store.findById(store_id);
+        if (!store) {
+            return res.status(404).json({
+                success: false,
+                message: "Store not found",
+            });
+        }
+
+        // Create a new ToppingGroup
+        const toppingGroup = new ToppingGroup({
+            name,
+            store: store_id,
+            toppings, // Expecting an array of toppings from request body
+        });
+
+        // Save to database
+        await toppingGroup.save();
+
+        return res.status(201).json({
+            success: true,
+            message: "Topping group created successfully",
+            data: toppingGroup,
+        });
+    } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid store ID format",
+            });
+        }
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const addToppingToGroup = async (req, res) => {
+    try {
+        const { group_id } = req.params;
+        const { name, price } = req.body;
+
+        if (!name || price === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: "Topping name and price are required",
+            });
+        }
+
+        // Find the topping group
+        let toppingGroup = await ToppingGroup.findById(group_id);
+        if (!toppingGroup) {
+            return res.status(404).json({
+                success: false,
+                message: "Topping group not found",
+            });
+        }
+
+        // Add the new topping
+        toppingGroup.toppings.push({ name, price });
+
+        // Save the updated group
+        await toppingGroup.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Topping added successfully",
+            data: toppingGroup,
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const removeToppingFromGroup = async (req, res) => {
+    try {
+        const { group_id, topping_id } = req.params;
+
+        // Find the topping group
+        let toppingGroup = await ToppingGroup.findById(group_id);
+        if (!toppingGroup) {
+            return res.status(404).json({
+                success: false,
+                message: "Topping group not found",
+            });
+        }
+
+        // Find and remove the topping
+        const initialLength = toppingGroup.toppings.length;
+        toppingGroup.toppings = toppingGroup.toppings.filter(
+            (topping) => topping._id.toString() !== topping_id
+        );
+
+        if (toppingGroup.toppings.length === initialLength) {
+            return res.status(404).json({
+                success: false,
+                message: "Topping not found in the group",
+            });
+        }
+
+        // Save the updated group
+        await toppingGroup.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Topping removed successfully",
+            data: toppingGroup,
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const deleteToppingGroup = async (req, res) => {
+    try {
+        const { group_id } = req.params;
+
+        // Find and delete the topping group
+        const toppingGroup = await ToppingGroup.findByIdAndDelete(group_id);
+        if (!toppingGroup) {
+            return res.status(404).json({
+                success: false,
+                message: "Topping group not found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Topping group deleted successfully",
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const addToppingToDish = async (req, res) => {
+    try {
+        const { dish_id } = req.params;
+        const { topping_ids } = req.body; // Expecting an array of topping IDs
+
+        if (!Array.isArray(topping_ids) || topping_ids.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Topping IDs must be a non-empty array",
+            });
+        }
+
+        // Find the dish
+        let dish = await Dish.findById(dish_id);
+        if (!dish) {
+            return res.status(404).json({
+                success: false,
+                message: "Dish not found",
+            });
+        }
+
+        // Find all topping groups that contain these toppings
+        let toppingGroups = await ToppingGroup.find({
+            "toppings._id": { $in: topping_ids }
+        });
+
+        if (!toppingGroups || toppingGroups.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No valid toppings found",
+            });
+        }
+
+        // Extract valid toppings from the groups
+        let validToppings = [];
+        toppingGroups.forEach(group => {
+            let filteredToppings = group.toppings.filter(topping =>
+                topping_ids.includes(topping._id.toString())
+            );
+            validToppings.push(...filteredToppings);
+        });
+
+        if (validToppings.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "None of the provided topping IDs are valid",
+            });
+        }
+
+        // Ensure dish has a toppings field
+        if (!dish.toppings) {
+            dish.toppings = [];
+        }
+
+        // Filter out toppings that are already added to the dish
+        let newToppings = validToppings.filter(
+            topping => !dish.toppings.some(
+                existingTopping => existingTopping._id.toString() === topping._id.toString()
+            )
+        );
+
+        if (newToppings.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "All provided toppings are already added to the dish",
+            });
+        }
+
+        // Add new toppings to the dish
+        dish.toppings.push(...newToppings);
+
+        // Save the updated dish
+        await dish.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Toppings added to dish successfully",
+            data: dish,
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+
+
 
 
 module.exports = {
@@ -699,5 +923,7 @@ module.exports = {
     getAllTopping, getAllCategory, getAllStaff, getOrder,
     getAllOrder, getDish, getTopping, getCategory, getStaff,
     getAvgRating, getAllRating, getAvgStoreRating, getToppingFromDish,
+    createToppingGroup, addToppingToGroup, removeToppingFromGroup, 
+    deleteToppingGroup, addToppingToDish
     
 };
