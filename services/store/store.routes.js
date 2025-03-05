@@ -15,6 +15,12 @@ const {
   getAvgRating,
   getAllRating,
   getAvgStoreRating,
+  getToppingFromDish,
+  addToppingToDish,
+  createTopping,
+  addToppingToGroup,
+  removeToppingFromGroup,
+  deleteToppingGroup
   // createDish,
   // createStore,
   // createToppingGroup,
@@ -40,12 +46,19 @@ router.get("/dish/:dish_id", getDish); // CHECK
 router.get("/dish/:dish_id/rating/avg", getAvgRating) // CHECK
 router.get("/dish/:dish_id/rating/page/:no", getAllRating); // CHECK
 router.get("/:store_id/rating/avg", getAvgStoreRating) // CHECK
+router.get("/dish/:dish_id/topping", getToppingFromDish)
+// router.post("/dish/:dish_id/topping", addToppingToDish)
 // router.post("/:store_id/dish/add", createDish);
 // router.put("/:store_id/dish/update", updateDish);
 
 // Topping routes
 router.get("/:store_id/topping/page/:no", getAllTopping); // CHECK
 router.get("/topping/:group_id", getTopping); // CHECK
+// router.post("/topping/create", createTopping);
+// router.post("/topping/:group_id/add", addToppingToGroup);
+// router.post("/topping/:group_id/remove", removeToppingFromGroup);
+// router.delete("/topping/:group_id", deleteToppingGroup)
+
 // router.post("/:store_id/topping/add", createToppingGroup);
 // router.put("/:store_id/topping/update", updateToppingGroup);
 

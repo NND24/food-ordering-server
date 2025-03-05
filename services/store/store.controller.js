@@ -656,10 +656,48 @@ const getAvgStoreRating = async (req, res) => {
     }
 }
 
+const getToppingFromDish = async (req, res) => {
+    try {
+        const { dish_id } = req.params;
+    
+        // Fetch the dish with its topping groups
+        const dish = await Dish.findById(dish_id).populate("toppingGroups");
+        if (!dish) {
+            return res.status(404).json({
+                success: false,
+                message: "Dish not found",
+            });
+        }
+    
+        // Ensure toppings exist
+        if (!dish.toppingGroups || dish.toppingGroups.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No topping groups found for this dish",
+            });
+        }
+    
+        return res.status(200).json({
+            success: true,
+            message: "Toppings retrieved successfully",
+            data: dish.toppingGroups,
+        });
+    } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid dish ID format",
+            });
+        }
+        return res.status(500).json({ success: false, message: error.message });
+    }    
+}
+
 
 module.exports = {
     getAllDish, getStoreInformation,
     getAllTopping, getAllCategory, getAllStaff, getOrder,
     getAllOrder, getDish, getTopping, getCategory, getStaff,
-    getAvgRating, getAllRating, getAvgStoreRating
+    getAvgRating, getAllRating, getAvgStoreRating, getToppingFromDish,
+    
 };
