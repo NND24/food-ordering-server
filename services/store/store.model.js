@@ -87,7 +87,12 @@ var storeSchema = new mongoose.Schema(
       IC_front: { filePath: String, url: String },
       IC_back: { filePath: String, url: String },
       businessLicense: { filePath: String, url: String },
-      storePicture: { filePath: String, url: String },
+      storePicture: [
+        {
+          filePath: String,
+          url: String,
+        },
+      ],
     },
   },
   { timestamps: true }
