@@ -85,7 +85,7 @@ const getStoreInformation = async (req, res) => {
     const { store_id } = req.params; // Extract store_id correctly
 
     // Find store by ID
-    const store = await Store.findById(store_id);
+    const store = await Store.findById(store_id).populate("storeCategory");
 
     if (!store) {
       return res.status(404).json({
