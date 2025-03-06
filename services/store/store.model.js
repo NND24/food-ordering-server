@@ -31,6 +31,9 @@ var dishSchema = new mongoose.Schema(
                 ref: "ToppingGroup", // Reference the ToppingGroup model
             }
         ],
+        discription: {
+            type:mongoose.Schema.Types.String,
+        }
     },
     { timestamps: true }
 );
