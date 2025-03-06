@@ -31,6 +31,30 @@ var dishSchema = new mongoose.Schema(
                 ref: "ToppingGroup", // Reference the ToppingGroup model
             }
         ],
+        discription: {
+            type:mongoose.Schema.Types.String,
+        }
+    },
+    { timestamps: true }
+);
+
+var foodTypeSchema = new mongoose.Schema(
+    {
+        name: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        image: {
+            url: {
+                type: String,
+                required: true,
+            },
+            createdAt: {
+                type: Date,
+                default: Date.now,
+            },
+        },
     },
     { timestamps: true }
 );
@@ -57,7 +81,7 @@ var storeSchema = new mongoose.Schema(
         },
         storeCategory: [{
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Category",
+            ref: "FoodType",
         }],
         paperWork: {
             IC_front: { url: String, filePath: String },
@@ -183,5 +207,6 @@ module.exports = {
     ToppingGroup: mongoose.model("ToppingGroup", toppingGroupSchema),
     Staff: mongoose.model("Staff", staffSchema),
     Rating: mongoose.model("Rating", ratingSchema),
-    Category: mongoose.model("Category", categorySchema)
+    Category: mongoose.model("Category", categorySchema),
+    FoodType: mongoose.model("FoodType", foodTypeSchema)
 };
