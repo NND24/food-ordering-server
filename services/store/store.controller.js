@@ -6,35 +6,57 @@ const { query } = require("express");
 const mongoose = require("mongoose");
 
 // THIS FUNCTION IS MADE TO OPTIMIZE THE PAGING BUT PENDING
-const fetchPaginatedData = async (Model, query, page, limit, populateFields = []) => {
-    const totalItems = await Model.countDocuments(query);
-    const totalPages = Math.ceil(totalItems / limit);
-    const currentPage = Math.min(page, totalPages);
-
-    const dataQuery = Model.find(query)
-        .skip((currentPage - 1) * limit)
-        .limit(limit);
-
-    if (populateFields.length) {
-        populateFields.forEach(field => dataQuery.populate(field));
-    }
-
-    const results = await dataQuery;
-    return { totalItems, totalPages, currentPage, results };
-};
-
-// [GET] /[store_id]/dish/page/[no]?name=[name]&category=[category]
-const getAllDish = async (req, res) => {
+const getPaginatedData = async (req, res, Model, filterOptions = {}, populateFields = "") => {
     try {
-        const { store_id, no } = req.params; // Lấy store_id và số trang từ URL
-        const { name, category } = req.query; // Lấy query params nếu có
-
-        const pageSize = 10; // Số món ăn trên mỗi trang
+        const { store_id, no } = req.params;
+        const pageSize = 10;
         const page = parseInt(no);
 
         if (page < 1) {
             return res.status(400).json({ success: false, message: "Invalid page number" });
         }
+
+        // Create a filter object with store_id
+        let filter = { store: store_id, ...filterOptions };
+
+        // Count total documents
+        const totalItems = await Model.countDocuments(filter);
+        const totalPages = Math.ceil(totalItems / pageSize);
+        const skip = (page - 1) * pageSize;
+
+        // Fetch paginated data
+        let query = Model.find(filter).skip(skip).limit(pageSize);
+        if (populateFields) query = query.populate(populateFields);
+
+        const data = await query;
+
+        if (!data || data.length === 0) {
+            return res.status(404).json({ success: false, message: `${Model.modelName} not found` });
+        }
+
+        res.status(200).json({
+            success: true,
+            total: totalItems,
+            totalPages,
+            currentPage: page,
+            pageSize,
+            data,
+        });
+
+    } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({ success: false, message: "Invalid store ID format" });
+        } else {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+};
+
+// [GET] /api/store/{store_id}/dish?name=[name]&category=[category]&limit=[limit]&page=[page]
+const getAllDish = async (req, res) => {
+    try {
+        const { store_id } = req.params; // Lấy store_id từ URL
+        const { name, category, limit, page } = req.query; // Lấy query params
 
         // Tạo bộ lọc tìm kiếm
         let filter = { store: store_id };
@@ -45,18 +67,30 @@ const getAllDish = async (req, res) => {
             filter.category = category; // Lọc theo category ID
         }
 
-        // Đếm tổng số món ăn theo filter
-        const totalDishes = await Dish.countDocuments(filter);
-        const totalPages = Math.ceil(totalDishes / pageSize); // Tính tổng số trang
+        let dishesQuery = Dish.find(filter).populate("category", "name");
 
-        // Nếu số trang yêu cầu lớn hơn tổng số trang -> trả về trang cuối cùng
-        const skip = (page - 1) * pageSize;
+        // Kiểm tra nếu có phân trang
+        if (limit && page) {
+            const pageSize = parseInt(limit);
+            const pageNumber = parseInt(page);
+
+            if (pageNumber < 1 || pageSize < 1) {
+                return res.status(400).json({ success: false, message: "Invalid page or limit number" });
+            }
+
+            // Đếm tổng số món ăn theo filter
+            const totalDishes = await Dish.countDocuments(filter);
+            const totalPages = Math.ceil(totalDishes / pageSize);
+
+            // Nếu số trang yêu cầu lớn hơn tổng số trang -> trả về trang cuối cùng
+            const skip = (pageNumber - 1) * pageSize;
+
+            dishesQuery = dishesQuery.skip(skip).limit(pageSize);
+        }
 
         // Truy vấn danh sách món ăn
-        const dishes = await Dish.find(filter)
-            .populate("category", "name") // Lấy thông tin category
-            .skip(skip)
-            .limit(pageSize);
+        const dishes = await dishesQuery;
+
         if (!dishes || dishes.length === 0) {
             return res.status(404).json({
                 success: false,
@@ -66,10 +100,7 @@ const getAllDish = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            total: totalDishes,
-            totalPages,
-            currentPage: page,
-            pageSize,
+            total: limit && page ? await Dish.countDocuments(filter) : dishes.length,
             data: dishes,
         });
     } catch (error) {
@@ -79,11 +110,107 @@ const getAllDish = async (req, res) => {
                 message: "Invalid store ID format",
             });
         }
-        else {
-            res.status(500).json({ success: false, message: error.message });
-        }
+        res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// [GET] /?name=[name]&category=[category]&sort=[name||rating||standout]&limit=[limit]&page=[page]
+const getAllStore = async (req, res) => {
+    try {
+        const { name, category, sort, limit, page } = req.query;
+
+        // Tạo bộ lọc tìm kiếm
+        let filter = {};
+        if (name) {
+            filter.name = { $regex: name, $options: "i" };
+        }
+        if (category) {
+            filter.storeCategory = category; // Corrected category filter
+        }
+
+        let storeQuery = Store.find(filter);
+
+        // Sắp xếp theo rating hoặc số đơn hàng
+        if (sort) {
+            if (sort === "rating") {
+                storeQuery = storeQuery
+                    .lean()
+                    .then(async (stores) => {
+                        const storeRatings = await Rating.aggregate([
+                            { $group: { _id: "$store", avgRating: { $avg: "$ratingValue" } } },
+                        ]);
+
+                        // Gán rating vào store
+                        stores = stores.map((store) => {
+                            const rating = storeRatings.find((r) => r._id.equals(store._id));
+                            return { ...store, avgRating: rating ? rating.avgRating : 0 };
+                        });
+
+                        return stores.sort((a, b) => b.avgRating - a.avgRating);
+                    });
+            } else if (sort === "name") {
+                storeQuery = storeQuery.sort({ name: 1 });
+            } else if (sort === "standout") {
+                storeQuery = storeQuery
+                    .lean()
+                    .then(async (stores) => {
+                        const storeOrders = await Order.aggregate([
+                            { $group: { _id: "$store", orderCount: { $sum: 1 } } },
+                        ]);
+
+                        // Gán orderCount vào store
+                        stores = stores.map((store) => {
+                            const order = storeOrders.find((o) => o._id.equals(store._id));
+                            return { ...store, orderCount: order ? order.orderCount : 0 };
+                        });
+
+                        return stores.sort((a, b) => b.orderCount - a.orderCount);
+                    });
+            }
+        }
+
+        // Kiểm tra nếu có phân trang
+        if (limit && page) {
+            const pageSize = parseInt(limit);
+            const pageNumber = parseInt(page);
+
+            if (pageNumber < 1 || pageSize < 1) {
+                return res.status(400).json({ success: false, message: "Invalid page or limit number" });
+            }
+
+            const totalStores = await Store.countDocuments(filter);
+            const totalPages = Math.ceil(totalStores / pageSize);
+            const skip = (pageNumber - 1) * pageSize;
+
+            storeQuery = storeQuery.skip(skip).limit(pageSize);
+        }
+
+        // Truy vấn danh sách cửa hàng
+        let stores = await storeQuery;
+
+        if (!stores || stores.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Stores not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            total: limit && page ? await Store.countDocuments(filter) : stores.length,
+            data: stores,
+        });
+    } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid format",
+            });
+        }
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 // [GET] /[store_id]
 const getStoreInformation = async (req, res) => {
     try {
@@ -118,239 +245,31 @@ const getStoreInformation = async (req, res) => {
         });
     }
 };
-// [GET] /[store_id]/topping/page/[no]
-const getAllTopping = async (req, res) => {
-    try {
-        const { store_id, no } = req.params; // Lấy store_id và số trang từ URL
 
-        const pageSize = 10; // Số món ăn trên mỗi trang
-        const page = parseInt(no);
-
-        if (page < 1) {
-            return res.status(400).json({ success: false, message: "Invalid page number" });
-        }
-
-        // Tạo bộ lọc tìm kiếm
-        let filter = { store: store_id };
-
-
-        // Đếm tổng số món ăn theo filter
-        const totalTopping = await ToppingGroup.countDocuments(filter);
-        const totalPages = Math.ceil(totalTopping / pageSize); // Tính tổng số trang
-
-        // Nếu số trang yêu cầu lớn hơn tổng số trang -> trả về trang cuối cùng
-        const skip = (page - 1) * pageSize;
-
-        // Truy vấn danh sách món ăn
-        const toppings = await ToppingGroup.find(filter)
-            .skip(skip)
-            .limit(pageSize);
-        if (!toppings || toppings.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "Topping not found",
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            total: totalTopping,
-            totalPages,
-            currentPage: page,
-            pageSize,
-            data: toppings,
-        });
-    } catch (error) {
-        if (error.name === "CastError") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid store ID format",
-            });
-        }
-        else {
-            res.status(500).json({ success: false, message: error.message });
-        }
+const getAllTopping = (req, res) => getPaginatedData(req, res, ToppingGroup);
+const getAllCategory = (req, res) => {
+    const { name } = req.query;
+    let filterOptions = {};
+    if (name) {
+        filterOptions.name = { $regex: name, $options: "i" };
     }
+    getPaginatedData(req, res, Category, filterOptions, "name");
 };
+const getAllStaff = (req, res) => {
+    const { name, role } = req.query;
+    let filterOptions = {};
+    if (name) filterOptions.name = { $regex: name, $options: "i" };
+    if (role) filterOptions.role = role;
 
-
-// [GET] /[store_id]/category/page/[no]?name=[name]
-const getAllCategory = async (req, res) => {
-    try {
-        const { store_id, no } = req.params; // Lấy store_id và số trang từ URL
-        const { name } = req.query;
-        const pageSize = 10; // Số món ăn trên mỗi trang
-        const page = parseInt(no);
-
-        if (page < 1) {
-            return res.status(400).json({ success: false, message: "Invalid page number" });
-        }
-
-        // Tạo bộ lọc tìm kiếm
-        let filter = { store: store_id };
-        if (name) {
-            filter.name = { $regex: name, $options: "i" };
-        }
-
-        // Đếm tổng số món ăn theo filter
-        const totalCategory = await Category.countDocuments(filter);
-        const totalPages = Math.ceil(totalCategory / pageSize); // Tính tổng số trang
-
-        // Nếu số trang yêu cầu lớn hơn tổng số trang -> trả về trang cuối cùng
-        const skip = (page - 1) * pageSize;
-
-        // Truy vấn danh sách món ăn
-        const categorys = await Category.find(filter)
-            .populate("name")
-            .skip(skip)
-            .limit(pageSize);
-        if (!categorys || categorys.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "Category not found",
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            total: totalCategory,
-            totalPages,
-            currentPage: page,
-            pageSize,
-            data: categorys,
-        });
-    } catch (error) {
-        if (error.name === "CastError") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid store ID format",
-            });
-        }
-        else {
-            res.status(500).json({ success: false, message: error.message });
-        }
-    }
+    getPaginatedData(req, res, Staff, filterOptions, "name");
 };
+const getAllOrder = (req, res) => {
+    const { status } = req.query;
+    let filterOptions = {};
+    if (status) filterOptions.status = status;
 
-
-// [GET] /[store_id]/staff/page/[no]?name=[name]&role=[role]
-const getAllStaff = async (req, res) => {
-    try {
-        const { store_id, no } = req.params; // Lấy store_id và số trang từ URL
-        const { name, role } = req.query;
-        const pageSize = 10; // Số món ăn trên mỗi trang
-        const page = parseInt(no);
-
-        if (page < 1) {
-            return res.status(400).json({ success: false, message: "Invalid page number" });
-        }
-
-        // Tạo bộ lọc tìm kiếm
-        let filter = { store: store_id };
-        if (name) {
-            filter.name = { $regex: name, $options: "i" };
-        }
-        if (role) {
-            filter.role = role; // Lọc theo role
-        }
-
-        // Đếm tổng số món ăn theo filter
-        const totalStaff = await Staff.countDocuments(filter);
-        const totalPages = Math.ceil(totalStaff / pageSize); // Tính tổng số trang
-
-        // Nếu số trang yêu cầu lớn hơn tổng số trang -> trả về trang cuối cùng
-        const skip = (page - 1) * pageSize;
-
-        // Truy vấn danh sách món ăn
-        const staffs = await Staff.find(filter)
-            .populate("name")
-            .skip(skip)
-            .limit(pageSize);
-        if (!staffs || staffs.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "Staffs not found",
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            total: totalStaff,
-            totalPages,
-            currentPage: page,
-            pageSize,
-            data: staffs,
-        });
-    } catch (error) {
-        if (error.name === "CastError") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid store ID format",
-            });
-        }
-        else {
-            res.status(500).json({ success: false, message: error.message });
-        }
-    }
+    getPaginatedData(req, res, Order, filterOptions);
 };
-
-// [GET] /[store_id]/order/page/[no]?status=[status]
-const getAllOrder = async (req, res) => {
-    try {
-        const { store_id, no } = req.params;
-        const { status } = req.query;
-        const pageSize = 10; // Số món ăn trên mỗi trang
-        const page = parseInt(no);
-
-        if (page < 1) {
-            return res.status(400).json({ success: false, message: "Invalid page number" });
-        }
-
-        // Tạo bộ lọc tìm kiếm
-        let filter = { store: store_id };
-        if (status) {
-            filter.status = status
-        }
-        // Đếm tổng số món ăn theo filter
-        const totalOrder = await Order.countDocuments(filter);
-        const totalPages = Math.ceil(totalOrder / pageSize); // Tính tổng số trang
-
-        // Nếu số trang yêu cầu lớn hơn tổng số trang -> trả về trang cuối cùng
-        const skip = (page - 1) * pageSize;
-
-        // Truy vấn danh sách món ăn
-        const orders = await Order.find(filter)
-            .skip(skip)
-            .limit(pageSize);
-        if (!orders || orders.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "Order not found",
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            total: totalOrder,
-            totalPages,
-            currentPage: page,
-            pageSize,
-            data: orders,
-        });
-
-    } catch (error) {
-        if (error.name === "CastError") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid store ID format",
-            });
-        }
-        else {
-            res.status(500).json({ success: false, message: error.message });
-        }
-    }
-
-}
 
 // [GET] /order/[order_id]
 const getOrder = async (req, res) => {
@@ -924,6 +843,6 @@ module.exports = {
     getAllOrder, getDish, getTopping, getCategory, getStaff,
     getAvgRating, getAllRating, getAvgStoreRating, getToppingFromDish,
     createToppingGroup, addToppingToGroup, removeToppingFromGroup, 
-    deleteToppingGroup, addToppingToDish
+    deleteToppingGroup, addToppingToDish, getAllStore
     
 };

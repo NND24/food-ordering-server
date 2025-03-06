@@ -1,6 +1,7 @@
 const express = require("express");
 const authMiddleware = require("../../middlewares/authMiddleware");
 const {
+  getAllStore,
   getAllDish,
   getStoreInformation,
   getAllTopping,
@@ -20,7 +21,7 @@ const {
   createToppingGroup,
   addToppingToGroup,
   removeToppingFromGroup,
-  deleteToppingGroup
+  deleteToppingGroup,
   // createDish,
   // createStore,
   // createToppingGroup,
@@ -36,12 +37,13 @@ const {
 const router = express.Router();
 
 // Store routes
+router.get("/", getAllStore);
 router.get("/:store_id", getStoreInformation); // CHECK
 // router.post("/add", createStore);
 // router.put("/update", updateStore);
 
 // Dish routes
-router.get("/:store_id/dish/page/:no", getAllDish); // CHECK
+router.get("/:store_id/dish", getAllDish); // CHECK // MOD
 router.get("/dish/:dish_id", getDish); // CHECK
 router.get("/dish/:dish_id/rating/avg", getAvgRating) // CHECK
 router.get("/dish/:dish_id/rating/page/:no", getAllRating); // CHECK
