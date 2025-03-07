@@ -94,10 +94,24 @@ var toppingGroupSchema = new mongoose.Schema(
     },
     toppings: [
       {
-        name: { type: String, required: true },
-        price: { type: Number, required: true },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Topping",
       },
     ],
+  },
+  { timestamps: true }
+);
+
+// Topping Schema
+const toppingSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    price: { type: Number, required: true },
+    toppingGroup: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ToppingGroup",
+      required: true,
+    },
   },
   { timestamps: true }
 );
@@ -132,11 +146,6 @@ var ratingSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
-    },
-    dish: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Dish",
       required: true,
     },
     store: {
@@ -191,6 +200,7 @@ ratingSchema.statics.getStoreRatingSummary = async function (storeId) {
 module.exports = {
   Dish: mongoose.model("Dish", dishSchema),
   Store: mongoose.model("Store", storeSchema),
+  Topping: mongoose.model("Topping", toppingSchema),
   ToppingGroup: mongoose.model("ToppingGroup", toppingGroupSchema),
   Staff: mongoose.model("Staff", staffSchema),
   Rating: mongoose.model("Rating", ratingSchema),
