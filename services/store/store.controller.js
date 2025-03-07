@@ -26,7 +26,10 @@ const getAllStore = async (req, res) => {
     const { name, category, sort, limit, page } = req.query;
     let filterOptions = {};
     if (name) filterOptions.name = { $regex: name, $options: "i" };
-    if (category) filterOptions.storeCategory = category;
+    if (category) {
+      const categories = Array.isArray(category) ? category : category.split(",");
+      filterOptions.storeCategory = { $in: categories };
+    }
 
     // Fetch all stores first
     let stores = await Store.find(filterOptions).populate("storeCategory").lean();
