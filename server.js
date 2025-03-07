@@ -18,9 +18,14 @@ const messageRoute = require("./services/message/message.routes");
 const chatRoute = require("./services/chat/chat.routes");
 const storeRoute = require("./services/store/store.routes");
 const locationRoute = require("./services/location/location.routes");
+<<<<<<< HEAD
 const shipperRoute = require("./services/shipper/shipper.routes");
 const foodTypeRoute = require("./services/foodType/foodType.routes");
 const employeeRoute = require("./services/employee/employee.routes");
+=======
+const cartRoute = require("./services/cart/cart.routes");
+const favoriteRoute = require("./services/favorite/favorite.routes");
+>>>>>>> a3b585b939c2b4adc09efd555ea85994bd4ff71a
 
 const app = express();
 connectDB();
@@ -28,7 +33,7 @@ connectDB();
 app.use(morgan("dev"));
 app.use(
   cors({
-    origin: "*",
+    origin: "http://localhost:3000",
     credentials: true,
   })
 );
@@ -45,9 +50,14 @@ app.use("/api/v1/message", messageRoute);
 app.use("/api/v1/chat", chatRoute);
 app.use("/api/v1/store", storeRoute);
 app.use("/api/v1/location", locationRoute);
+<<<<<<< HEAD
 app.use("/api/v1/shipper", shipperRoute);
 app.use("/api/v1/foodType", foodTypeRoute);
 app.use("/api/v1/employee", employeeRoute);
+=======
+app.use("/api/v1/cart", cartRoute);
+app.use("/api/v1/favorite", favoriteRoute);
+>>>>>>> a3b585b939c2b4adc09efd555ea85994bd4ff71a
 
 app.use(errorHandler);
 

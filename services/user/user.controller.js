@@ -46,5 +46,4 @@ const deleteUser = asyncHandler(async (req, res, next) => {
     next(error);
   }
 });
-
 module.exports = { getAllUser, getUser, updateUser, deleteUser };
