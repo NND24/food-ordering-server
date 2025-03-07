@@ -49,8 +49,11 @@ const getAllStore = async (req, res) => {
       const storeOrders = await Order.aggregate([{ $group: { _id: "$store", orderCount: { $sum: 1 } } }]);
       stores = stores
         .map((store) => {
-          const order = storeOrders.find((o) => o._id.equals(store._id));
-          return { ...store, orderCount: order ? order.orderCount : 0 };
+          const order = storeOrders.find((o) => o._id.toString() == store._id.toString());
+          return {
+            ...store,
+            orderCount: order ? order.orderCount : 0,
+          };
         })
         .sort((a, b) => b.orderCount - a.orderCount);
     } else if (sort === "name") {
@@ -106,15 +109,15 @@ const getStoreInformation = async (req, res) => {
     ]);
 
     // Find rating data for the store
-    const rating = storeRatings.length > 0 ? storeRatings[0].avgRating : 0;
+    const avgRating = storeRatings.length > 0 ? storeRatings[0].avgRating : 0;
     const amountRating = storeRatings.length > 0 ? storeRatings[0].amountRating : 0;
 
     res.status(200).json({
       success: true,
       data: {
         ...store.toObject(),
-        avgRating: rating,
-        amountRating: amountRating,
+        avgRating,
+        amountRating,
       },
     });
   } catch (error) {
