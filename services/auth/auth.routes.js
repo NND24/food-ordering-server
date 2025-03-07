@@ -2,6 +2,7 @@ const express = require("express");
 const authMiddleware = require("../../middlewares/authMiddleware");
 const {
   register,
+  registerShipper,
   login,
   logout,
   getRefreshToken,
@@ -16,6 +17,7 @@ const {
 const router = express.Router();
 
 router.post("/register", register);
+router.post("/register/shipper", registerShipper);
 router.post("/login", login);
 router.post("/login/google", googleLoginWithToken);
 router.post("/login/google/mobile", loginWithGoogleMobile);

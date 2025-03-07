@@ -1,8 +1,9 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
+const { type } = require("os");
 
-var userSchema = new mongoose.Schema(
+var shipperSchema = new mongoose.Schema(
   {
     name: {
       type: String,
@@ -18,28 +19,33 @@ var userSchema = new mongoose.Schema(
     phonenumber: {
       type: String,
       trim: true,
+      required: true,
     },
     password: {
       type: String,
       required: true,
+      default: function () {
+        return this.phonenumber;
+      },
     },
     gender: {
       type: String,
       enum: ["female", "male", "other"],
       default: "other",
     },
-    role: {
-      type: [String],
-      enum: ["user", "manager", "admin", "shipper"],
-      default: ["user"],
-    },
     avatar: {
-      filePath: String,
+      filePath: { type: String, required: false },
       url: {
         type: String,
         required: true,
         default: "https://res.cloudinary.com/datnguyen240/image/upload/v1722168751/avatars/avatar_pnncdk.png",
       },
+      createdAt: { type: Date, default: Date.now },
+    },
+    status: {
+      type: String,
+      enum: ['PENDING', 'APPROVED', 'BLOCKED'],
+      default: "PENDING"
     },
     refreshToken: {
       type: String,
@@ -53,7 +59,7 @@ var userSchema = new mongoose.Schema(
   }
 );
 
-userSchema.pre("save", async function (next) {
+shipperSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
   }
@@ -68,11 +74,11 @@ userSchema.pre("save", async function (next) {
   }
 });
 
-userSchema.methods.isPasswordMatched = async function (enteredPassword) {
+shipperSchema.methods.isPasswordMatched = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-userSchema.methods.createOtp = async function () {
+shipperSchema.methods.createOtp = async function () {
   // Tạo OTP gồm 6 số
   const newOTP = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -88,4 +94,4 @@ userSchema.methods.createOtp = async function () {
   return newOTP;
 };
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model("Shipper", shipperSchema);
