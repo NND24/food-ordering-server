@@ -38,24 +38,6 @@ var dishSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-var foodTypeSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    image: {
-      filePath: String,
-      url: {
-        type: String,
-        required: true,
-      },
-    },
-  },
-  { timestamps: true }
-);
-
 // Store Schema
 var storeSchema = new mongoose.Schema(
   {
@@ -213,5 +195,4 @@ module.exports = {
   Staff: mongoose.model("Staff", staffSchema),
   Rating: mongoose.model("Rating", ratingSchema),
   Category: mongoose.model("Category", categorySchema),
-  FoodType: mongoose.model("FoodType", foodTypeSchema),
 };
