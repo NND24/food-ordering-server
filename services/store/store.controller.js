@@ -34,15 +34,15 @@ const getAllStore = async (req, res) => {
     // Fetch all stores first
     let stores = await Store.find(filterOptions).populate("storeCategory").lean();
 
+    const storeRatings = await Rating.aggregate([{ $group: { _id: "$store", avgRating: { $avg: "$ratingValue" } } }]);
+    stores = stores.map((store) => {
+      const rating = storeRatings.find((r) => r._id.equals(store._id));
+      return { ...store, avgRating: rating ? rating.avgRating : 0 };
+    });
+
     // Apply sorting manually
     if (sort === "rating") {
-      const storeRatings = await Rating.aggregate([{ $group: { _id: "$store", avgRating: { $avg: "$ratingValue" } } }]);
-      stores = stores
-        .map((store) => {
-          const rating = storeRatings.find((r) => r._id.equals(store._id));
-          return { ...store, avgRating: rating ? rating.avgRating : 0 };
-        })
-        .sort((a, b) => b.avgRating - a.avgRating);
+      stores = stores.sort((a, b) => b.avgRating - a.avgRating);
     } else if (sort === "standout") {
       const storeOrders = await Order.aggregate([{ $group: { _id: "$store", orderCount: { $sum: 1 } } }]);
       stores = stores
@@ -97,9 +97,21 @@ const getStoreInformation = async (req, res) => {
       });
     }
 
+    // Calculate average rating
+    const storeRatings = await Rating.aggregate([
+      { $match: { store: store._id } }, // Only consider ratings for this store
+      { $group: { _id: "$store", avgRating: { $avg: "$ratingValue" } } },
+    ]);
+
+    // Find rating data for the store
+    const rating = storeRatings.length > 0 ? storeRatings[0].avgRating : 0;
+
     res.status(200).json({
       success: true,
-      data: store,
+      data: {
+        ...store.toObject(),
+        avgRating: rating,
+      },
     });
   } catch (error) {
     // Handle invalid ObjectId error
