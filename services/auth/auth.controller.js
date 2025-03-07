@@ -1,4 +1,5 @@
 const User = require("../user/user.model");
+const Shipper = require("../shipper/shipper.model")
 const jwt = require("jsonwebtoken");
 const createError = require("../../utils/createError");
 const crypto = require("crypto");
@@ -19,6 +20,23 @@ const register = asyncHandler(async (req, res, next) => {
   const findUser = await User.findOne({ email });
   if (!findUser) {
     await User.create({
+      name,
+      email,
+      phonenumber,
+      gender,
+      password,
+    });
+    res.status(201).json("Tạo tài khoản thành công");
+  } else {
+    next(createError(409, "Tài khoản đã tồn tại"));
+  }
+});
+
+const registerShipper = asyncHandler(async (req, res, next) => {
+  const { name, email, phonenumber, gender, password } = req.body;
+  const findShipper = await Shipper.findOne({ email });
+  if (!findShipper) {
+    await Shipper.create({
       name,
       email,
       phonenumber,
@@ -301,6 +319,7 @@ const checkOTP = asyncHandler(async (req, res, next) => {
 
 module.exports = {
   register,
+  registerShipper,
   login,
   googleLoginWithToken,
   loginWithGoogleMobile,

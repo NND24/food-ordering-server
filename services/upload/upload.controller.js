@@ -47,6 +47,30 @@ const uploadAvatarImage = asyncHandler(async (req, res, next) => {
   res.status(200).json(updateUser);
 });
 
+const uploadAvatarShipperImage = asyncHandler(async (req, res, next) => {
+  const shipperId = req?.shipper?._id;
+
+  if (!req.file) {
+    return next(createError(400, "No file uploaded"));
+  }
+
+  const uploadedImage = await uploadFile(req.file, "avatars");
+  const updateShipper = await Shipper.findByIdAndUpdate(
+    shipperId,
+    {
+      avatar: uploadedImage,
+    },
+    { new: true }
+  ).select("name email phonenumber gender avatar isGoogleLogin");
+
+  if (!updateShipper) {
+    return next(createError(404, "Shipper not found"));
+  }
+
+  res.status(200).json(updateShipper);
+});
+
+
 const uploadImages = asyncHandler(async (req, res, next) => {
   if (!req.files || req.files.length === 0) {
     return next(createError(400, "No files uploaded"));
@@ -107,6 +131,7 @@ const deleteFile = asyncHandler(async (req, res, next) => {
 
 module.exports = {
   uploadAvatarImage,
+  uploadAvatarShipperImage,
   uploadImages,
   deleteFile,
 };
