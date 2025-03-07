@@ -18,6 +18,9 @@ const messageRoute = require("./services/message/message.routes");
 const chatRoute = require("./services/chat/chat.routes");
 const storeRoute = require("./services/store/store.routes");
 const locationRoute = require("./services/location/location.routes");
+const shipperRoute = require("./services/shipper/shipper.routes");
+const foodTypeRoute = require("./services/foodType/foodType.routes");
+const employeeRoute = require("./services/employee/employee.routes");
 
 const app = express();
 connectDB();
@@ -42,6 +45,9 @@ app.use("/api/v1/message", messageRoute);
 app.use("/api/v1/chat", chatRoute);
 app.use("/api/v1/store", storeRoute);
 app.use("/api/v1/location", locationRoute);
+app.use("/api/v1/shipper", shipperRoute);
+app.use("/api/v1/foodType", foodTypeRoute);
+app.use("/api/v1/employee", employeeRoute);
 
 app.use(errorHandler);
 
