@@ -1,5 +1,6 @@
 const User = require("../user/user.model");
-const Shipper = require("../shipper/shipper.model")
+const Shipper = require("../shipper/shipper.model");
+const Employee = require("../employee/employee.model");
 const jwt = require("jsonwebtoken");
 const createError = require("../../utils/createError");
 const crypto = require("crypto");
@@ -9,6 +10,10 @@ const sendEmail = require("../../utils/sendEmail");
 
 const generateAccessToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+};
+
+const generateAccessAdminToken = (id, role) => {
+  return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: "1d" });
 };
 
 const generateRefreshToken = (id) => {
@@ -72,6 +77,35 @@ const login = asyncHandler(async (req, res, next) => {
     res.status(200).json({
       _id: findUser?._id,
       token: generateAccessToken(findUser?._id),
+    });
+  } else {
+    return next(createError(401, "Email hoặc mật khẩu không hợp lệ!"));
+  }
+});
+
+const loginAdmin = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    next(createError(400, "Vui lòng điền đầy đủ thông tin"));
+  }
+
+  const findEmployee = await Employee.findOne({ email: email });
+  if (findEmployee && (await findEmployee.isPasswordMatched(password))) {
+    const refreshToken = generateRefreshToken(findEmployee._id);
+    await Employee.findByIdAndUpdate(
+      findEmployee._id,
+      {
+        refreshToken: refreshToken,
+      },
+      { new: true }
+    );
+    res.cookie("refreshToken", refreshToken, {
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+    res.status(200).json({
+      _id: findEmployee?._id,
+      token: generateAccessAdminToken(findEmployee?._id, findEmployee.role),
     });
   } else {
     return next(createError(401, "Email hoặc mật khẩu không hợp lệ!"));
@@ -320,7 +354,7 @@ const checkOTP = asyncHandler(async (req, res, next) => {
 module.exports = {
   register,
   registerShipper,
-  login,
+  login, loginAdmin,
   googleLoginWithToken,
   loginWithGoogleMobile,
   getRefreshToken,
