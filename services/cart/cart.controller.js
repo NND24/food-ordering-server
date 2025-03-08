@@ -47,6 +47,53 @@ const getUserCart = async (req, res) => {
   }
 };
 
+const getUserCartInStore = async (req, res) => {
+  try {
+    const userId = req?.user?._id;
+    const { storeId } = req.params;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    if (!storeId) {
+      return res.status(401).json({
+        success: false,
+        message: "Store not found",
+      });
+    }
+    // Tạo bộ lọc tìm kiếm
+    let filter = { user: userId, store: storeId };
+
+    // Truy vấn danh sách món ăn
+    const cart = await Cart.find(filter)
+      .populate({
+        path: "store",
+        populate: {
+          path: "storeCategory",
+        },
+      })
+      .populate("items.dish")
+      .populate("items.toppings");
+
+    if (!cart || cart.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: cart[0],
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 const increaseQuantity = async (req, res) => {
   try {
     const userId = req?.user?._id;
@@ -413,6 +460,7 @@ const completeCart = async (req, res) => {
 
 module.exports = {
   getUserCart,
+  getUserCartInStore,
   increaseQuantity,
   decreaseQuantity,
   clearItem,
