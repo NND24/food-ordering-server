@@ -20,7 +20,15 @@ const getUserCart = async (req, res) => {
     let filter = { user: userId };
 
     // Truy vấn danh sách món ăn
-    const cart = await Cart.find(filter).populate("store").populate("items.dish").populate("items.toppings");
+    const cart = await Cart.find(filter)
+      .populate({
+        path: "store",
+        populate: {
+          path: "storeCategory",
+        },
+      })
+      .populate("items.dish")
+      .populate("items.toppings");
 
     if (!cart || cart.length === 0) {
       return res.status(404).json({
