@@ -484,7 +484,15 @@ const getToppingFromDish = async (req, res) => {
     const { dish_id } = req.params;
 
     // Fetch the dish with its topping groups
-    const dish = await Dish.findById(dish_id).populate("toppingGroups");
+    const dish = await Dish.findById(dish_id)
+      .populate("toppingGroups")
+      .populate({
+        path: "toppingGroups",
+        populate: {
+          path: "toppings",
+        },
+      });
+
     if (!dish) {
       return res.status(404).json({
         success: false,
