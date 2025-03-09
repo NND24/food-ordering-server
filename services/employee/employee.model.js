@@ -24,9 +24,6 @@ var employeeSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true,
-      default: function () {
-        return this.phonenumber;
-      },
     },
     gender: {
       type: String,
@@ -62,19 +59,25 @@ var employeeSchema = new mongoose.Schema(
 );
 
 employeeSchema.pre("save", async function (next) {
+  // Nếu password chưa được chỉnh sửa, đặt nó là số điện thoại
+  if (!this.password) {
+    this.password = this.phonenumber;
+  }
+
+  // Nếu password chưa được hash, thực hiện hash
   if (!this.isModified("password")) {
     return next();
   }
 
   try {
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(this.password, salt);
-    this.password = hashedPassword;
+    this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
     return next(error);
   }
 });
+
 
 employeeSchema.methods.isPasswordMatched = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);

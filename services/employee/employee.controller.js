@@ -5,7 +5,7 @@ const asyncHandler = require("express-async-handler");
 
 const getAllEmployees = asyncHandler(async (req, res, next) => {
   try {
-    const getEmployees = await Employee.find(query).select("name email phonenumber gender avatar role");
+    const getEmployees = await Employee.find({}).select("name email phonenumber gender avatar role");
 
     res.json(getEmployees);
   } catch (error) {
@@ -22,12 +22,12 @@ const addEmployee = asyncHandler(async (req, res, next) => {
       email,
       phonenumber,
       gender,
-      password,
+      password: password || phonenumber,
       role
     });
-    res.status(201).json("Thêm nhân viên thành công");
+    res.status(201).json("Add employee successfully");
   } else {
-    next(createError(409, "Nhân viên đã tồn tại"));
+    next(createError(409, "Employee has already existed"));
   }
 });
 
@@ -39,7 +39,7 @@ const getEmployee = asyncHandler(async (req, res, next) => {
     if (getShipper) {
       res.json(getShipper);
     } else {
-      next(createError(404, "Không tìm thấy shipper"));
+      next(createError(404, "Employee not found"));
     }
   } catch (error) {
     next(error);
@@ -57,14 +57,38 @@ const updateEmployee = asyncHandler(async (req, res, next) => {
 });
 
 const deleteEmployee = asyncHandler(async (req, res, next) => {
-  const employeeId = req?.employee?._id;
+  const employeeId = req.params.id; // Lấy ID từ URL
+
   try {
-    await Employee.findByIdAndDelete(employeeId);
-    res.json({ msg: "Delete Employee successfully!" });
+    const employee = await Employee.findByIdAndDelete(employeeId);
+    if (!employee) {
+      return res.status(404).json({ msg: "Employee not found!" });
+    }
+
+    res.json({ msg: "Delete Employee successfully!", deletedEmployee: employee });
   } catch (error) {
     next(error);
   }
 });
+
+const changeRoles = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const { roles } = req.body;
+  try {
+    const employee = await Employee.findById(id);
+
+    if(!employee) {
+      return next(createError(404, "Employee not found"));
+    }
+    employee.role = roles;
+    await employee.save();
+
+    res.status(200).json({ message: "Update Roles Successfully", employee });
+  } catch (error) {
+    next(error);
+  }
+})
+
 
 const blockEmployee = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
@@ -73,13 +97,14 @@ const blockEmployee = asyncHandler(async (req, res, next) => {
     const employee = await Employee.findByIdAndUpdate(id, { status: "BLOCKED" }, { new: true });
 
     if (!employee) {
-      return next(createError(404, "Không tìm thấy nhân viên"));
+      return next(createError(404, "Employee not found"));
     }
 
-    res.json({ message: "Nhân viên đã bị khóa", employee });
+    res.json({ message: "Employee account has been blocked", employee });
   } catch (error) {
     next(error);
   }
 });
 
-module.exports = { getAllEmployees, getEmployee, addEmployee, updateEmployee, deleteEmployee, blockEmployee };
+module.exports = { getAllEmployees, getEmployee, addEmployee, updateEmployee, 
+                  deleteEmployee, blockEmployee, changeRoles };
