@@ -39,6 +39,11 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "OK" });
+});
+
+
 // Routes
 app.use("/api/v1/auth", authRoute);
 app.use("/api/v1/user", userRoute);
