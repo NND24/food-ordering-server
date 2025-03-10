@@ -134,7 +134,7 @@ const increaseQuantity = async (req, res) => {
       cart = await Cart.create({
         user: userId,
         store: storeId,
-        items: [{ dish: dishId, quantity: quantity ? quantity : 1, topping: toppings }],
+        items: [{ dish: dishId, quantity: quantity ? quantity : 1, toppings: toppings }],
       });
 
       return res.status(201).json({
@@ -152,7 +152,7 @@ const increaseQuantity = async (req, res) => {
       cart.items[itemIndex].quantity += quantity ? quantity : 1;
     } else {
       // Item does not exist, add new item
-      cart.items.push({ dish: dishId, quantity: quantity ? quantity : 1, topping: toppings });
+      cart.items.push({ dish: dishId, quantity: quantity ? quantity : 1, toppings: toppings });
     }
 
     // Save the updated cart
@@ -262,7 +262,7 @@ const updateCart = async (req, res) => {
         message: "User not found",
       });
     }
-    if (!storeId || !dishId || !quantity) {
+    if (!storeId || !dishId || quantity === undefined) {
       return res.status(400).json({
         success: false,
         message: "Invalid request body",
@@ -310,11 +310,18 @@ const updateCart = async (req, res) => {
     let cart = await Cart.findOne({ user: userId, store: storeId });
 
     if (!cart) {
+      if (quantity === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot add an item with quantity 0",
+        });
+      }
+
       // Create a new cart with the item
       cart = await Cart.create({
         user: userId,
         store: storeId,
-        items: [{ dish: dishId, quantity: quantity, topping: toppings }],
+        items: [{ dish: dishId, quantity, toppings }],
       });
 
       return res.status(201).json({
@@ -328,12 +335,28 @@ const updateCart = async (req, res) => {
     let itemIndex = cart.items.findIndex((item) => item.dish.toString() === dishId);
 
     if (itemIndex > -1) {
-      // Item exists, update the cart
-      cart.items[itemIndex].quantity = quantity;
-      cart.items[itemIndex].topping = toppings;
+      if (quantity === 0) {
+        // If quantity = 0, delete item from cart
+        cart.items.splice(itemIndex, 1);
+      } else {
+        // Item exists, update the cart
+        cart.items[itemIndex].quantity = quantity;
+        cart.items[itemIndex].toppings = toppings;
+      }
     } else {
-      // Item does not exist, add new item
-      cart.items.push({ dish: dishId, quantity: quantity, topping: toppings });
+      if (quantity > 0) {
+        // Item does not exist, add new item
+        cart.items.push({ dish: dishId, quantity, toppings });
+      }
+    }
+
+    // If cart doesn't have any item, delete cart from database
+    if (cart.items.length === 0) {
+      await Cart.findByIdAndDelete(cart._id);
+      return res.status(200).json({
+        success: true,
+        message: "Cart is empty and has been deleted",
+      });
     }
 
     // Save the updated cart
