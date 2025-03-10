@@ -24,6 +24,7 @@ const employeeRoute = require("./services/employee/employee.routes");
 const cartRoute = require("./services/cart/cart.routes");
 const favoriteRoute = require("./services/favorite/favorite.routes");
 
+
 const app = express();
 connectDB();
 
@@ -37,6 +38,11 @@ app.use(
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "OK" });
+});
+
 
 // Routes
 app.use("/api/v1/auth", authRoute);
