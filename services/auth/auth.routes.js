@@ -16,6 +16,14 @@ const {
 
 const router = express.Router();
 
+
+// Store Auth
+// router.post("/register/store", registerStore);
+// router.post("/login/gogle/store", storeLoginGoogleWithToken);
+// router.post("login/google/mobile/store", storeLoginGoogleWithMobile)
+
+// router.post("/logout/store")0
+
 router.post("/register", register);
 router.post("/register/shipper", registerShipper);
 router.post("/login", login);

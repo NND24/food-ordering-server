@@ -20,6 +20,14 @@ const generateRefreshToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, { expiresIn: "30d" });
 };
 
+const generateAccessTokenWithRole = (id, role) => {
+  return jwt.sign({ id: id, role: role }, process.env.JWT_SECRET, { expiresIn: "1d" })
+}
+
+const generateRefreshTokenWithRole = (id, role) => {
+  return jwt.sign({ id: id, role: role }, process.env.JWT_REFRESH_SECRET, { expiresIn: "30d" });
+};
+
 const register = asyncHandler(async (req, res, next) => {
   const { name, email, phonenumber, gender, password } = req.body;
   const findUser = await User.findOne({ email });
@@ -56,14 +64,14 @@ const registerShipper = asyncHandler(async (req, res, next) => {
 
 const login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
-
+  const { getRole } = req.query;
   if (!email || !password) {
     next(createError(400, "Vui lòng điền đầy đủ thông tin"));
   }
 
   const findUser = await User.findOne({ email: email });
   if (findUser && (await findUser.isPasswordMatched(password))) {
-    const refreshToken = generateRefreshToken(findUser._id);
+    let refreshToken = getRole ? generateRefreshTokenWithRole(findUser._id, findUser?.role) : generateRefreshToken(findUser._id);
     await User.findByIdAndUpdate(
       findUser._id,
       {
@@ -76,7 +84,7 @@ const login = asyncHandler(async (req, res, next) => {
     });
     res.status(200).json({
       _id: findUser?._id,
-      token: generateAccessToken(findUser?._id),
+      token: getRole ? generateAccessTokenWithRole(findUser?._id, findUser?.role) : generateAccessToken(findUser?._id),
     });
   } else {
     return next(createError(401, "Email hoặc mật khẩu không hợp lệ!"));
