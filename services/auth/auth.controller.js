@@ -319,6 +319,7 @@ const forgotPassword = asyncHandler(async (req, res, next) => {
 
   const otp = await user.createOtp();
   await user.save();
+
   const resetURL = `
       <p>Mã OTP của bạn là: ${otp}</p>
       <p>Vui lòng nhập mã này để lấy lại mật khẩu. OTP sẽ hết hạn trong 2 phút</p>
@@ -327,15 +328,16 @@ const forgotPassword = asyncHandler(async (req, res, next) => {
     to: email,
     text: "",
     subject: "Forgot Password OTP",
-    htm: resetURL,
+    html: resetURL,
   };
-  sendEmail(data);
+  await sendEmail(data);
   res.status(200).json("Send email successfully");
 });
 
 const checkOTP = asyncHandler(async (req, res, next) => {
   const { email, otp } = req.body;
   const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
+
   const user = await User.findOne({
     email,
     otp: hashedOTP,
@@ -354,7 +356,8 @@ const checkOTP = asyncHandler(async (req, res, next) => {
 module.exports = {
   register,
   registerShipper,
-  login, loginAdmin,
+  login,
+  loginAdmin,
   googleLoginWithToken,
   loginWithGoogleMobile,
   getRefreshToken,

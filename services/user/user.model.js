@@ -82,8 +82,6 @@ userSchema.methods.createOtp = async function () {
   // Thời gian hết hạn trong 2 phút
   this.otpExpires = Date.now() + 2 * 60 * 1000;
 
-  await this.save();
-
   // Trả về OTP (chưa mã hóa) để gửi cho người dùng
   return newOTP;
 };
