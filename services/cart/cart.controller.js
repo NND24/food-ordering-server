@@ -4,7 +4,7 @@ const asyncHandler = require("express-async-handler");
 const { query } = require("express");
 const mongoose = require("mongoose");
 const { Dish, ToppingGroup } = require("../store/store.model");
-const { Order } = require("../order/order.model");
+const Order = require("../order/order.model");
 
 // [GET] /#
 const getUserCart = async (req, res) => {
