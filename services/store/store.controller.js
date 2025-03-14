@@ -1,5 +1,6 @@
 const { Store, Dish, ToppingGroup, Staff, Rating, Category } = require("./store.model");
 const { Order } = require("../order/order.model");
+const { User } = require("../user/user.model")
 const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 const { query } = require("express");
@@ -180,7 +181,7 @@ const getAllOrder = async (req, res) => {
     let filterOptions = {};
     if (status) filterOptions.status = status;
 
-    const response = await getPaginatedData(Order, filterOptions, null, limit, page);
+    const response = await getPaginatedData(Order, filterOptions, "user" , limit, page);
     res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

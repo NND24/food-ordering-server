@@ -12,6 +12,7 @@ const {
   checkOTP,
   googleLoginWithToken,
   loginWithGoogleMobile,
+  storeOwnByUser
 } = require("./auth.controller");
 
 const router = express.Router();
@@ -27,6 +28,7 @@ const router = express.Router();
 router.post("/register", register);
 router.post("/register/shipper", registerShipper);
 router.post("/login", login);
+router.post("/store", authMiddleware, storeOwnByUser)
 router.post("/login/admin", loginAdmin);
 router.post("/login/google", googleLoginWithToken);
 router.post("/login/google/mobile", loginWithGoogleMobile);
