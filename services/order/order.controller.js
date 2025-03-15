@@ -18,7 +18,8 @@ const getUserOrder = asyncHandler(async (req, res, next) => {
       path: "store",
     })
     .populate("items.dish")
-    .populate("items.toppings");
+    .populate("items.toppings")
+    .sort({ updatedAt: -1 });
 
   if (!orders || orders.length === 0) {
     next(
