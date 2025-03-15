@@ -282,7 +282,7 @@ const logout = asyncHandler(async (req, res, next) => {
   res.status(200).json("Logout successful");
 });
 
-const changePassword = asyncHandler(async (req, res) => {
+const changePassword = asyncHandler(async (req, res, next) => {
   const { _id } = req.user;
   const { oldPassword, newPassword } = req.body;
 
@@ -299,7 +299,7 @@ const changePassword = asyncHandler(async (req, res) => {
   res.status(200).json("Đổi mật khẩu thành công!");
 });
 
-const resetPassword = asyncHandler(async (req, res) => {
+const resetPassword = asyncHandler(async (req, res, next) => {
   const { email, newPassword } = req.body;
 
   const user = await User.findOne({ email });
