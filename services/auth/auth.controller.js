@@ -1,4 +1,5 @@
 const User = require("../user/user.model");
+const {Store} = require("../store/store.model")
 const Shipper = require("../shipper/shipper.model");
 const Employee = require("../employee/employee.model");
 const jwt = require("jsonwebtoken");
@@ -19,6 +20,12 @@ const generateAccessAdminToken = (id, role) => {
 const generateRefreshToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, { expiresIn: "30d" });
 };
+
+const storeOwnByUser = asyncHandler(async (req, res, next) => {
+  const { _id } = req.user;
+  const findStore = await Store.findOne({ owner: _id });
+  res.status(200).json({data: findStore});
+})
 
 const register = asyncHandler(async (req, res, next) => {
   const { name, email, phonenumber, gender, password } = req.body;
@@ -366,4 +373,5 @@ module.exports = {
   resetPassword,
   forgotPassword,
   checkOTP,
+  storeOwnByUser
 };

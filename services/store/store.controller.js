@@ -4,6 +4,7 @@ const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 const { query } = require("express");
 const mongoose = require("mongoose");
+const { User } = require("../user/user.model")
 const { getPaginatedData } = require("../../utils/paging");
 
 // [GET] /:store_id/dish
@@ -180,7 +181,7 @@ const getAllOrder = async (req, res) => {
     let filterOptions = {};
     if (status) filterOptions.status = status;
 
-    const response = await getPaginatedData(Order, filterOptions, null, limit, page);
+    const response = await getPaginatedData(Order, filterOptions, "user", limit, page);
     res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
