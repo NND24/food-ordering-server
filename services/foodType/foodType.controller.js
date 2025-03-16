@@ -2,33 +2,31 @@ const FoodType = require("./foodType.model");
 const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 
-
 const getAllFoodTypes = asyncHandler(async (req, res, next) => {
   try {
-    const getFoodTypes = await FoodType.find(query).select("name image");
+    const getFoodTypes = await FoodType.find();
 
-    res.json(getShippers);
+    res.json(getFoodTypes);
   } catch (error) {
     next(error);
   }
 });
 
 const createFoodType = asyncHandler(async (req, res, next) => {
-    const { name} = req.body;
-    if (!name || typeof name !== "string") {
-      return next(createError(400, "Tên loại thức ăn không hợp lệ"));
-    }
-    const findFoodType = await FoodType.isNameExists(name);
-    if (!findFoodType) {
-      await FoodType.create({
-        name
-      });
-      res.status(201).json("Tạo loại thức ăn thành công");
-    } else {
-      next(createError(409, "Loại thức ăn đã tồn tại"));
-    }
+  const { name } = req.body;
+  if (!name || typeof name !== "string") {
+    return next(createError(400, "Tên loại thức ăn không hợp lệ"));
+  }
+  const findFoodType = await FoodType.isNameExists(name);
+  if (!findFoodType) {
+    await FoodType.create({
+      name,
+    });
+    res.status(201).json("Tạo loại thức ăn thành công");
+  } else {
+    next(createError(409, "Loại thức ăn đã tồn tại"));
+  }
 });
-    
 
 const getFoodType = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
