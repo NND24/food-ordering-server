@@ -181,12 +181,24 @@ const getAllOrder = async (req, res) => {
     let filterOptions = {};
     if (status) filterOptions.status = status;
 
-    const response = await getPaginatedData(Order, filterOptions, "user" , limit, page);
+    const response = await getPaginatedData(
+      Order,
+      filterOptions,
+      [
+        { path: "user", select: "_id name" }, // Chỉ lấy _id và name của user
+        { path: "items.dish" }, // Populate dish
+        { path: "items.toppings" } // Populate toppings
+      ],
+      limit,
+      page
+    );
+
     res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 // [GET] /order/[order_id]
 const getOrder = async (req, res) => {
   try {

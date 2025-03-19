@@ -45,8 +45,8 @@ router.get("/:store_id", getStoreInformation); // CHECK
 // Dish routes
 router.get("/:store_id/dish", getAllDish); // CHECK // MOD
 router.get("/dish/:dish_id", getDish); // CHECK
-router.get("/dish/:dish_id/rating/avg", getAvgRating) // CHECK
-router.get("/dish/:dish_id/rating/", getAllRating); // CHECK
+router.get("/dish/:dish_id/rating/avg", getAvgRating) // CHECK _ DEPRICATE
+router.get("/dish/:dish_id/rating/", getAllRating); // CHECK _ DEPRICATE
 router.get("/:store_id/rating/avg", getAvgStoreRating) // CHECK
 router.get("/dish/:dish_id/topping", getToppingFromDish); // CHECK
 router.post("/dish/:dish_id/topping", addToppingToDish); // CHECK
