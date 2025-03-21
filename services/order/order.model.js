@@ -46,9 +46,13 @@ var orderSchema = new mongoose.Schema(
         require: true,
       },
     },
+    shipper: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Shipper", // Người giao hàng
+    },
     status: {
       type: String,
-      enum: ["preorder", "pending", "confirmed", "preparing", "finished", "delivered", "cancelled"],
+      enum: ["preorder", "pending", "confirmed", "preparing", "finished", "taken", "delivering", "delivered", "done", "cancelled"],
       default: "pending",
     },
     paymentMethod: {
