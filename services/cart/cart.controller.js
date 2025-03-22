@@ -3,7 +3,7 @@ const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 const { query } = require("express");
 const mongoose = require("mongoose");
-const { Dish, ToppingGroup } = require("../store/store.model");
+const { Dish, ToppingGroup, Rating } = require("../store/store.model");
 const Order = require("../order/order.model");
 
 // [GET] /#
@@ -20,7 +20,7 @@ const getUserCart = async (req, res) => {
     let filter = { user: userId };
 
     // Truy vấn danh sách món ăn
-    const cart = await Cart.find(filter)
+    const allCarts = await Cart.find(filter)
       .populate({
         path: "store",
         populate: {
@@ -28,18 +28,36 @@ const getUserCart = async (req, res) => {
         },
       })
       .populate("items.dish")
-      .populate("items.toppings");
+      .populate("items.toppings")
+      .lean();
 
-    if (!cart || cart.length === 0) {
+    if (!allCarts || allCarts.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Cart not found",
+        message: "Carts not found",
       });
     }
 
+    const storeRatings = await Rating.aggregate([
+      { $group: { _id: "$store", avgRating: { $avg: "$ratingValue" }, amountRating: { $sum: 1 } } },
+    ]);
+
+    const updatedCarts = allCarts.map((cart) => {
+      const rating = storeRatings.find((r) => r._id.toString() === cart.store._id.toString());
+
+      return {
+        ...cart,
+        store: {
+          ...cart.store,
+          avgRating: rating ? rating.avgRating : 0,
+          amountRating: rating ? rating.amountRating : 0,
+        },
+      };
+    });
+
     res.status(200).json({
       success: true,
-      data: cart,
+      data: updatedCarts,
     });
   } catch (error) {
     console.log(error);
