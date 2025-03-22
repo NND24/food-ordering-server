@@ -214,6 +214,52 @@ const updateOrderStatus = asyncHandler(async (req, res, next) => {
   });
 });
 
+const getDeliveredOrders = asyncHandler(async (req, res, next) => {
+  const shipperId = req?.user?._id;
+
+  if (!shipperId) {
+    return next(
+      createError(400, { success: false, message: "Shipper not found" })
+    );
+  }
+
+  try {
+    // Lấy `page` và `limit` từ query params (mặc định page = 1, limit = 5)
+    let { page, limit } = req.query;
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 5;
+    const skip = (page - 1) * limit; // Tính offset
+
+    // Lấy tổng số đơn hàng đã giao
+    const totalOrders = await Order.countDocuments({
+      shipper: shipperId,
+      status: "done",
+    });
+
+    // Lấy danh sách đơn hàng theo phân trang
+    const deliveredOrders = await Order.find({
+      shipper: shipperId,
+      status: "done",
+    })
+      .populate("store")
+      .populate("items.dish")
+      .populate("items.toppings")
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({
+      success: true,
+      page,
+      totalPages: Math.ceil(totalOrders / limit),
+      totalOrders,
+      data: deliveredOrders,
+    });
+  } catch (error) {
+    next(createError(500, { success: false, message: "Server error", error }));
+  }
+});
+
 module.exports = {
   getUserOrder,
   getOrderDetail,
@@ -221,4 +267,5 @@ module.exports = {
   acceptOrder,
   getOnGoingOrder,
   updateOrderStatus,
+  getDeliveredOrders,
 };

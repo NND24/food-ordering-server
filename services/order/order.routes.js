@@ -8,12 +8,14 @@ const {
   acceptOrder,
   getOnGoingOrder,
   updateOrderStatus,
+  getDeliveredOrders,
 } = require("./order.controller");
 const router = express.Router();
 
 router.get("/", authMiddleware, getUserOrder);
 router.get("/finished", authMiddleware, getFinishedOrders);
 router.get("/taken", authMiddleware, getOnGoingOrder);
+router.get("/delivered", authMiddleware, getDeliveredOrders);
 router.get(
   "/:orderId",
   authMiddleware,
