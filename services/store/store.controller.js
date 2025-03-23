@@ -456,7 +456,7 @@ const getAllStoreRating = async (req, res) => {
     const { limit, page, sort } = req.query;
 
     let filterOptions = { store: storeId };
-    const result = await getPaginatedData(Rating, filterOptions, "user", parseInt(limit), parseInt(page));
+    const result = await getPaginatedData(Rating, filterOptions, "user dishes", parseInt(limit), parseInt(page));
 
     if (sort === "desc") {
       result.data = result.data.sort((a, b) => b.ratingValue - a.ratingValue);
