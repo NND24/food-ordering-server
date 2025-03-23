@@ -26,6 +26,13 @@ const getPaginatedData = async (Model, filterOptions = {}, populateFields = null
           path: "user",
           select: "name avatar",
         });
+      } else if (populateFields == "user dishes") {
+        query = query
+          .populate({
+            path: "user",
+            select: "name avatar",
+          })
+          .populate("dishes");
       } else {
         query = query.populate(populateFields);
       }
