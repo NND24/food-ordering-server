@@ -522,7 +522,16 @@ const clearCart = async (req, res) => {
 const completeCart = async (req, res) => {
   try {
     const userId = req?.user?._id;
-    const { storeId, paymentMethod, deliveryAddress, location = [] } = req.body;
+    const {
+      storeId,
+      paymentMethod,
+      customerName,
+      customerPhonenumber,
+      deliveryAddress,
+      detailAddress,
+      note,
+      location = [],
+    } = req.body;
     if (!userId) {
       return res.status(401).json({ success: false, message: "User not found" });
     }
@@ -535,6 +544,9 @@ const completeCart = async (req, res) => {
     }
     const newOrder = new Order({
       user: userId,
+      customerName,
+      customerPhonenumber,
+      note,
       store: storeId,
       items: cart.items, // Copy cart items to order
       totalPrice: cart.totalPrice,
@@ -542,6 +554,7 @@ const completeCart = async (req, res) => {
         type: "Point",
         coordinates: location,
         address: deliveryAddress,
+        detailAddress,
       },
       status: "pending", // Default status for a new order
       paymentMethod: paymentMethod,
