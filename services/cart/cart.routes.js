@@ -11,6 +11,7 @@ const {
   clearCart,
   completeCart,
   updateCart,
+  reOrder,
 } = require("./cart.controller");
 const validateMongoDbId = require("../../middlewares/validateMongoDBId");
 const router = express.Router();
@@ -25,5 +26,6 @@ router.post("/clear/:dish_id", authMiddleware, clearItem);
 router.post("/clear/item/:storeId", authMiddleware, validateMongoDbId("storeId"), clearCartItem);
 router.post("/clear", authMiddleware, clearCart);
 router.post("/complete", authMiddleware, completeCart);
+router.post("/re-order", authMiddleware, reOrder);
 
 module.exports = router;

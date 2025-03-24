@@ -538,7 +538,7 @@ const completeCart = async (req, res) => {
     if (!storeId || !paymentMethod || !deliveryAddress || !location) {
       return res.status(400).json({ success: false, message: "Invalid request body" });
     }
-    const cart = await Cart.findOne({ user: userId });
+    const cart = await Cart.findOne({ user: userId, store: storeId });
     if (!cart || !cart.items.length) {
       return res.status(400).json({ success: false, message: "Cart is empty" });
     }
@@ -575,6 +575,48 @@ const completeCart = async (req, res) => {
   }
 };
 
+const reOrder = async (req, res) => {
+  try {
+    const userId = req?.user?._id;
+    const { storeId, items } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "User not found" });
+    }
+    if (!storeId) {
+      return res.status(400).json({ success: false, message: "Invalid request body" });
+    }
+
+    let cart = await Cart.findOne({ user: userId, store: storeId });
+
+    if (cart) {
+      cart.items = items;
+      await cart.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "ReOrder updated successfully",
+        cart,
+      });
+    } else {
+      const newCart = await Cart.create({
+        user: userId,
+        store: storeId,
+        items,
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: "ReOrder successfully",
+        cart: newCart,
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getUserCart,
   getUserCartInStore,
@@ -586,4 +628,5 @@ module.exports = {
   clearCart,
   completeCart,
   updateCart,
+  reOrder,
 };
