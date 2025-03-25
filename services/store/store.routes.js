@@ -22,6 +22,7 @@ const {
   addToppingToGroup,
   removeToppingFromGroup,
   deleteToppingGroup,
+  updateOrder
   // createDish,
   // createStore,
   // createToppingGroup,
@@ -78,5 +79,6 @@ router.get("/staff/:staff_id", getStaff); // CHECK
 // Order routes
 router.get("/:store_id/order", getAllOrder); // CHECK
 router.get("/order/:order_id", getOrder);  // CHECK
+router.put("/order/:order_id", updateOrder);
 
 module.exports = router;

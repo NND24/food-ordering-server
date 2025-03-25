@@ -15,8 +15,22 @@ const getAllDish = async (req, res) => {
 
     let filterOptions = { store: store_id };
     if (name) filterOptions.name = { $regex: name, $options: "i" };
-    const result = await getPaginatedData(Dish, filterOptions, "category", parseInt(limit), parseInt(page));
-    res.status(200).json(result);
+    const response = await getPaginatedData(
+      Dish,
+      filterOptions,
+      [
+        { path: "category", select: "name" }, 
+        { 
+          path: "toppingGroups", 
+          select: "name toppings", 
+          populate: { path: "toppings", select: "name price" } // Correctly populates toppings inside toppingGroups
+        }
+      ],
+      limit,
+      page
+    );
+
+    res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -179,21 +193,44 @@ const getAllOrder = async (req, res) => {
   try {
     const { status, limit, page } = req.query;
     let filterOptions = {};
-    if (status) filterOptions.status = status;
+    if (status) {
+      const statusArray = Array.isArray(status) ? status : status.split(",");
+      filterOptions.status = { $in: statusArray };
+    }
 
-    const response = await getPaginatedData(Order, filterOptions, "user", limit, page);
+    // Fully populate orders to match getOrderDetail
+    const response = await getPaginatedData(
+      Order,
+      filterOptions,
+      [
+        { path: "store" },  // Include store details
+        { path: "user", select: "name email avatar" }, // Include user details
+        { path: "items.dish", select: "name price image description" }, // Include dish details
+        { path: "items.toppings", select: "name price" } // Include toppings details
+      ],
+      limit,
+      page
+    );
+
     res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
 // [GET] /order/[order_id]
 const getOrder = async (req, res) => {
   try {
     const { order_id } = req.params;
 
     // Truy vấn danh sách món ăn
-    const order = await Order.findById(order_id);
+    const order = await Order.findById(order_id).populate([
+      { path: "store", select: "name" },  // Include store details
+      { path: "user", select: "name email avatar" }, // Include user details
+      { path: "items.dish", select: "name price" }, // Include dish details
+      { path: "items.toppings", select: "name price" } // Include toppings details
+    ]);
 
     if (!order) {
       return res.status(404).json({
@@ -740,6 +777,31 @@ const addToppingToDish = async (req, res) => {
   }
 };
 
+const updateOrder = async (req, res) => {
+  try {
+      const { order_id } = req.params; // Get order ID from the request parameters
+      const updatedData = req.body; // Get the updated data from the request body
+
+      // Ensure the order exists
+      const order = await Order.findById(order_id);
+      if (!order) {
+          return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Update the order with new data
+      Object.assign(order, updatedData);
+      await order.save();
+
+      return res.status(200).json({
+          message: "Order updated successfully",
+          data: order,
+      });
+  } catch (error) {
+      console.error("Error updating order:", error);
+      return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   getAllDish,
   getStoreInformation,
@@ -762,4 +824,5 @@ module.exports = {
   deleteToppingGroup,
   addToppingToDish,
   getAllStore,
+  updateOrder
 };

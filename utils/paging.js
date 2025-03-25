@@ -1,11 +1,10 @@
-const getPaginatedData = async (Model, filterOptions = {}, populateFields = null, limit = null, page = null) => {
+const getPaginatedData = async (Model, filterOptions = {}, populateFields = [], limit = null, page = null) => {
     try {
         let query = Model.find(filterOptions);
 
-        let totalItems = await Model.countDocuments(filterOptions); // Fixed incorrect reference
+        let totalItems = await Model.countDocuments(filterOptions);
         let totalPages = 0;
 
-        // If pagination is required
         if (limit && page) {
             if (page < 1) {
                 throw new Error("Invalid page number");
@@ -14,8 +13,6 @@ const getPaginatedData = async (Model, filterOptions = {}, populateFields = null
             page = parseInt(page);
             totalPages = Math.ceil(totalItems / limit);
             const skip = (page - 1) * limit;
-
-            // Apply pagination
             query = query.skip(skip).limit(limit);
         }
 
@@ -39,5 +36,6 @@ const getPaginatedData = async (Model, filterOptions = {}, populateFields = null
         throw new Error(error.message);
     }
 };
+
 
 module.exports = { getPaginatedData };

@@ -14,6 +14,10 @@ var cartSchema = new mongoose.Schema(
       ref: "Store",
       require: false,
     },
+    totalPrice: {
+      type: mongoose.Schema.Types.BigInt,
+      require: true
+    },
     items: [
       {
         dish: {

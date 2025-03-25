@@ -63,6 +63,7 @@ const registerShipper = asyncHandler(async (req, res, next) => {
 
 const login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
+  const { getRole } = req.query; // Get query param for role
 
   if (!email || !password) {
     next(createError(400, "Vui lòng điền đầy đủ thông tin"));
@@ -73,22 +74,23 @@ const login = asyncHandler(async (req, res, next) => {
     const refreshToken = generateRefreshToken(findUser._id);
     await User.findByIdAndUpdate(
       findUser._id,
-      {
-        refreshToken: refreshToken,
-      },
+      { refreshToken: refreshToken },
       { new: true }
     );
     res.cookie("refreshToken", refreshToken, {
       maxAge: 30 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
     });
     res.status(200).json({
-      _id: findUser?._id,
-      token: generateAccessToken(findUser?._id),
+      _id: findUser._id,
+      token: generateAccessToken(findUser._id),
+      ...(getRole === "true" && { role: findUser.role }), // Include role if getRole is true
     });
   } else {
     return next(createError(401, "Email hoặc mật khẩu không hợp lệ!"));
   }
 });
+
 
 const loginAdmin = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
