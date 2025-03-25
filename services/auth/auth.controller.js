@@ -121,6 +121,35 @@ const loginAdmin = asyncHandler(async (req, res, next) => {
   }
 });
 
+const loginShipper = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    next(createError(400, "Vui lòng điền đầy đủ thông tin"));
+  }
+
+  const findShipper = await Shipper.findOne({ email: email });
+  if (findShipper && (await findShipper.isPasswordMatched(password))) {
+    const refreshToken = generateRefreshToken(findShipper._id);
+    await User.findByIdAndUpdate(
+      findShipper._id,
+      {
+        refreshToken: refreshToken,
+      },
+      { new: true }
+    );
+    res.cookie("refreshToken", refreshToken, {
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+    res.status(200).json({
+      _id: findShipper?._id,
+      token: generateAccessToken(findShipper?._id),
+    });
+  } else {
+    return next(createError(401, "Email hoặc mật khẩu không hợp lệ!"));
+  }
+});
+
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const googleLoginWithToken = asyncHandler(async (req, res, next) => {
@@ -367,6 +396,7 @@ module.exports = {
   registerShipper,
   login,
   loginAdmin,
+  loginShipper,
   googleLoginWithToken,
   loginWithGoogleMobile,
   getRefreshToken,

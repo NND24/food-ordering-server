@@ -47,6 +47,10 @@ var shipperSchema = new mongoose.Schema(
       enum: ['PENDING', 'APPROVED', 'BLOCKED'],
       default: "PENDING"
     },
+    online:{
+      type: Boolean, 
+      enum: false,
+    },
     refreshToken: {
       type: String,
     },

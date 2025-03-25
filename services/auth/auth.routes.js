@@ -3,7 +3,7 @@ const authMiddleware = require("../../middlewares/authMiddleware");
 const {
   register,
   registerShipper,
-  login, loginAdmin,
+  login, loginAdmin, loginShipper,
   logout,
   getRefreshToken,
   changePassword,
@@ -22,6 +22,7 @@ router.post("/register/shipper", registerShipper);
 router.post("/login", login);
 router.post("/store", authMiddleware, storeOwnByUser)
 router.post("/login/admin", loginAdmin);
+router.post("/login/shipper", loginShipper);
 router.post("/login/google", googleLoginWithToken);
 router.post("/login/google/mobile", loginWithGoogleMobile);
 router.post("/forgot-password", forgotPassword);

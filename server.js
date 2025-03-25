@@ -24,6 +24,7 @@ const employeeRoute = require("./services/employee/employee.routes");
 const cartRoute = require("./services/cart/cart.routes");
 const favoriteRoute = require("./services/favorite/favorite.routes");
 const orderRoute = require("./services/order/order.routes");
+const ratingRoute = require("./routes/rating.route");
 
 const app = express();
 connectDB();
@@ -58,6 +59,7 @@ app.use("/api/v1/employee", employeeRoute);
 app.use("/api/v1/cart", cartRoute);
 app.use("/api/v1/favorite", favoriteRoute);
 app.use("/api/v1/order", orderRoute);
+app.use("/api/v1/rating", ratingRoute);
 
 app.use(errorHandler);
 
