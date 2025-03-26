@@ -898,6 +898,37 @@ const createDish = async (req, res) => {
   }
 };
 
+const createCategory = async (req, res) => {
+  try {
+    const { store_id } = req.params;
+    const { name } = req.body;
+
+    // Validate input
+    if (!name) {
+      return res.status(400).json({ message: "Category name is required" });
+    }
+
+    // Check if store exists
+    const existingStore = await Store.findById(store_id);
+    if (!existingStore) {
+      return res.status(404).json({ message: "Store not found" });
+    }
+
+    // Create new category
+    const newCategory = new Category({
+      name,
+      store: store_id, // Assigning the store ID from params
+    });
+
+    // Save to database
+    const savedCategory = await newCategory.save();
+
+    res.status(201).json({ message: "Category created", category: savedCategory });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
   getAllDish,
   getStoreInformation,
@@ -924,4 +955,5 @@ module.exports = {
   updateOrder,
   updateDish,
   createDish,
+  createCategory,
 };

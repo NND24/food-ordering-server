@@ -26,6 +26,7 @@ const {
   getAllStoreRating,
   updateDish,
   createDish,
+  createCategory
   // createStore,
   // createToppingGroup,
   // createCategory,
@@ -70,7 +71,7 @@ router.post("/:store_id/topping/create", createToppingGroup); // CHECK
 // Category routes
 router.get("/:store_id/category", getAllCategory); // CHECK
 router.get("/category/:category_id", getCategory); // CHECK
-// router.post("/:store_id/category/add", createCategory);
+router.post("/:store_id/category/add", createCategory);
 // router.put("/:store_id/category/update", updateCategory);
 
 // Staff routes
