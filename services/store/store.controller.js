@@ -154,7 +154,22 @@ const getStoreInformation = async (req, res) => {
 const getAllTopping = async (req, res) => {
   try {
     const { limit, page } = req.query;
-    const response = await getPaginatedData(ToppingGroup, {}, null, limit, page);
+    const { store_id } = req.params;
+    let filterOptions = { store: store_id };
+
+    const response = await getPaginatedData(
+      ToppingGroup, 
+      filterOptions, 
+      [
+        { 
+          path: "toppings", 
+          select: "name price", 
+          // populate: { path: "toppings", select: "name price" } // Correctly populates toppings inside toppingGroups
+        }
+      ], 
+      limit, 
+      page
+    );
     res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -823,6 +838,66 @@ const updateOrder = async (req, res) => {
   }
 };
 
+const updateDish = async (req, res) => {
+  try {
+    const { dish_id } = req.params; // Get order ID from the request parameters
+    const updatedData = req.body; // Get the updated data from the request body
+
+    // Ensure the order exists
+    const dish = await Dish.findById(dish_id);
+    if (!dish) {
+      return res.status(404).json({ message: "Dish not found" });
+    }
+
+    // Update the order with new data
+    Object.assign(dish, updatedData);
+    await dish.save();
+
+    return res.status(200).json({
+      message: "Dish updated successfully",
+      data: dish,
+    });
+  } catch (error) {
+    console.error("Error updating dish:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+const createDish = async (req, res) => {
+  try {
+    const { store_id } = req.params; // Get store ID from request parameters
+    const dishData = req.body; // Get dish details from request body
+
+    // Ensure required fields exist
+    if (!dishData.name || !dishData.price) {
+      return res.status(400).json({ message: "Dish name and price are required" });
+    }
+
+    // Check if the dish with the same name already exists in the same store
+    const existingDish = await Dish.findOne({ name: dishData.name, store: store_id });
+    if (existingDish) {
+      return res.status(400).json({ message: "A dish with this name already exists in the store." });
+    }
+
+    // Create new dish
+    const newDish = new Dish({
+      ...dishData,
+      store: store_id, // Associate the dish with the store
+    });
+
+    // Save dish to database
+    await newDish.save();
+
+    return res.status(201).json({
+      message: "Dish created successfully",
+      data: newDish,
+    });
+  } catch (error) {
+    console.error("Error creating dish:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   getAllDish,
   getStoreInformation,
@@ -846,5 +921,7 @@ module.exports = {
   deleteToppingGroup,
   addToppingToDish,
   getAllStore,
-  updateOrder
+  updateOrder,
+  updateDish,
+  createDish,
 };

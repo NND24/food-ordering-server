@@ -24,12 +24,13 @@ const {
   deleteToppingGroup,
   updateOrder,
   getAllStoreRating,
-  // createDish,
+  updateDish,
+  createDish,
   // createStore,
   // createToppingGroup,
   // createCategory,
   // createStaff,
-  // updateDish,
+
   // updateStore,
   // updateToppingGroup,
   // updateCategory,
@@ -53,8 +54,8 @@ router.get("/:store_id/rating/avg", getAvgStoreRating); // CHECK
 router.get("/:storeId/rating", getAllStoreRating);
 router.get("/dish/:dish_id/topping", getToppingFromDish); // CHECK
 router.post("/dish/:dish_id/topping", addToppingToDish); // CHECK
-// router.post("/:store_id/dish/add", createDish);
-// router.put("/:store_id/dish/update", updateDish);
+router.put("/dish/:dish_id", updateDish)
+router.post("/:store_id/dish/add", createDish);
 
 // Topping routes
 router.get("/:store_id/topping", getAllTopping); // CHECK
