@@ -1,5 +1,5 @@
 const User = require("../user/user.model");
-const {Store} = require("../store/store.model")
+const { Store } = require("../store/store.model")
 const Shipper = require("../shipper/shipper.model");
 const Employee = require("../employee/employee.model");
 const jwt = require("jsonwebtoken");
@@ -8,6 +8,10 @@ const crypto = require("crypto");
 const asyncHandler = require("express-async-handler");
 const { OAuth2Client } = require("google-auth-library");
 const sendEmail = require("../../utils/sendEmail");
+
+const hashPassword = (password, salt) => {
+  return crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
+};
 
 const generateAccessToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1d" });
@@ -24,7 +28,7 @@ const generateRefreshToken = (id) => {
 const storeOwnByUser = asyncHandler(async (req, res, next) => {
   const { _id } = req.user;
   const findStore = await Store.findOne({ owner: _id });
-  res.status(200).json({data: findStore});
+  res.status(200).json({ data: findStore });
 })
 
 const register = asyncHandler(async (req, res, next) => {
@@ -324,6 +328,12 @@ const changePassword = asyncHandler(async (req, res, next) => {
   const { _id } = req.user;
   const { oldPassword, newPassword } = req.body;
 
+  // Validate required fields
+  if (!oldPassword || !newPassword) {
+    return next(createError(400, "Mật khẩu cũ và mật khẩu mới là bắt buộc"));
+  }
+
+  // Find the user
   const user = await User.findById(_id);
   if (!user) return next(createError(404, "User not found"));
 

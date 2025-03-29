@@ -76,6 +76,13 @@ var storeSchema = new mongoose.Schema(
         },
       ],
     },
+    staff: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    isApproved: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
@@ -123,6 +130,20 @@ var staffSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+    phonenumber: {
+      type: String,
+      trim: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
     role: {
       type: String,
       enum: ["manager", "staff"],
@@ -133,13 +154,13 @@ var staffSchema = new mongoose.Schema(
       ref: "Store",
       required: true,
     },
-    contact: {
-      phone: String,
-      email: String,
-    },
+    
+
   },
   { timestamps: true }
 );
+
+
 
 var ratingSchema = new mongoose.Schema(
   {

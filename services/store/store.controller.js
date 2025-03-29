@@ -1,10 +1,10 @@
-const { Store, Dish, ToppingGroup, Staff, Rating, Category } = require("./store.model");
+const { Store, Dish, ToppingGroup, Staff, Rating, Category, Topping } = require("./store.model");
 const Order = require("../order/order.model");
 const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 const { query } = require("express");
 const mongoose = require("mongoose");
-const { User } = require("../user/user.model");
+const User = require("../user/user.model");
 const { getPaginatedData } = require("../../utils/paging");
 
 // [GET] /:store_id/dish
@@ -19,10 +19,10 @@ const getAllDish = async (req, res) => {
       Dish,
       filterOptions,
       [
-        { path: "category", select: "name" }, 
-        { 
-          path: "toppingGroups", 
-          select: "name toppings", 
+        { path: "category", select: "name" },
+        {
+          path: "toppingGroups",
+          select: "name toppings",
           populate: { path: "toppings", select: "name price" } // Correctly populates toppings inside toppingGroups
         }
       ],
@@ -158,16 +158,16 @@ const getAllTopping = async (req, res) => {
     let filterOptions = { store: store_id };
 
     const response = await getPaginatedData(
-      ToppingGroup, 
-      filterOptions, 
+      ToppingGroup,
+      filterOptions,
       [
-        { 
-          path: "toppings", 
-          select: "name price", 
+        {
+          path: "toppings",
+          select: "name price",
           // populate: { path: "toppings", select: "name price" } // Correctly populates toppings inside toppingGroups
         }
-      ], 
-      limit, 
+      ],
+      limit,
       page
     );
     res.status(200).json(response);
@@ -190,19 +190,26 @@ const getAllCategory = async (req, res) => {
   }
 };
 
-const getAllStaff = async (req, res) => {
-  try {
-    const { name, role, limit, page } = req.query;
-    let filterOptions = {};
-    if (name) filterOptions.name = { $regex: name, $options: "i" };
-    if (role) filterOptions.role = role;
+const getAllStaff = asyncHandler(async (req, res, next) => {
+  const { store_id } = req.params;
 
-    const response = await getPaginatedData(Staff, filterOptions, null, limit, page);
-    res.status(200).json(response);
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  const store = await Store.findById(store_id)
+    .populate({
+      path: "staff",
+      select: "-password", // Exclude password from populated staff
+    });
+  if (!store) {
+    return next(createError(404, "Cửa hàng không tồn tại"));
   }
-};
+
+  const sortedStaff = store.staff.sort((a, b) => {
+    const roleA = a.role.includes("manager") ? 0 : 1; // Managers first (0), Staff later (1)
+    const roleB = b.role.includes("manager") ? 0 : 1;
+    return roleA - roleB;
+  });
+
+  res.status(200).json(sortedStaff);
+});
 
 const getAllOrder = async (req, res) => {
   try {
@@ -306,7 +313,7 @@ const getTopping = async (req, res) => {
     const { group_id } = req.params;
 
     // Truy vấn danh sách món ăn
-    const toppingGroup = await ToppingGroup.findById(group_id);
+    const toppingGroup = await ToppingGroup.findById(group_id).populate("toppings");
 
     if (!toppingGroup) {
       return res.status(404).json({
@@ -361,66 +368,104 @@ const getCategory = async (req, res) => {
   }
 };
 
-const getStaff = async (req, res) => {
-  try {
-    const { staff_id } = req.params;
+const getStaff = asyncHandler(async (req, res, next) => {
+  const { store_id, staff_id } = req.params;
 
-    // Truy vấn danh sách món ăn
-    const staff = await Staff.findById(staff_id);
-
-    if (!staff) {
-      return res.status(404).json({
-        success: false,
-        message: "Staff not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: staff,
-    });
-  } catch (error) {
-    if (error.name === "CastError") {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid format",
-      });
-    } else {
-      res.status(500).json({ success: false, message: error.message });
-    }
+  const store = await Store.findById(store_id);
+  if (!store) {
+    return next(createError(404, "Cửa hàng không tồn tại"));
   }
-};
 
-// const getRating = async (req, res) => {
-//     try {
-//         const { dish_id } = req.params;
+  const staff = await User.findById(staff_id).select("-password");
+  if (!staff || !store.staff.includes(staff_id)) {
+    return next(createError(404, "Nhân viên không tồn tại trong cửa hàng này"));
+  }
 
-//         // Truy vấn danh sách món ăn
-//         const reviews = await Rating.find({ dish: dish_id }).populate("user");
+  res.status(200).json(staff);
+});
 
-//         if (!reviews) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "Reviews not found",
-//             });
-//         }
+const createStaff = asyncHandler(async (req, res, next) => {
+  const { store_id } = req.params;
+  const { name, email, phonenumber, gender, password, role } = req.body;
 
-//         res.status(200).json({
-//             success: true,
-//             data: reviews,
-//         });
-//     } catch (error) {
-//         if (error.name === "CastError") {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Invalid format",
-//             });
-//         }
-//         else {
-//             res.status(500).json({ success: false, message: error.message });
-//         }
-//     }
-// }
+  const store = await Store.findById(store_id);
+  if (!store) {
+    return next(createError(404, "Cửa hàng không tồn tại"));
+  }
+
+  let user = await User.findOne({ email });
+
+  // If the user already exists, check if they're already a staff member
+  if (user) {
+    if (store.staff.includes(user._id)) {
+      return next(createError(409, "Người này đã là nhân viên của cửa hàng"));
+    }
+  } else {
+    // Create a new user if they don't exist
+    user = await User.create({
+      name,
+      email,
+      phonenumber,
+      gender,
+      password,
+      role: ["user", role], // Assign staff role
+    });
+  }
+
+  // Ensure store.staff is initialized
+  if (!store.staff) {
+    store.staff = [];
+  }
+
+  // Add the user to the store's staff
+  store.staff.push(user._id);
+  await store.save();
+
+  const userWithoutPassword = await User.findById(user._id).select("-password");
+
+  res.status(201).json({
+    message: "Nhân viên đã được thêm vào cửa hàng",
+    staff: userWithoutPassword,
+  });
+});
+
+
+const updateStaff = asyncHandler(async (req, res, next) => {
+  const { store_id } = req.params;
+  const { staff_id, name, email, phonenumber, gender, role } = req.body;
+
+  const store = await Store.findById(store_id);
+  if (!store) {
+    return next(createError(404, "Cửa hàng không tồn tại"));
+  }
+
+  let staff = await User.findById(staff_id);
+  if (!staff || !store.staff.includes(staff_id)) {
+    return next(createError(404, "Nhân viên không tồn tại trong cửa hàng này"));
+  }
+
+  // Chỉ cho phép cập nhật role với các giá trị hợp lệ
+  const validRoles = ["staff", "manager"];
+  if (role && !validRoles.includes(role)) {
+    return next(createError(400, "Vai trò không hợp lệ"));
+  }
+
+  // Cập nhật thông tin nhân viên
+  if (name) staff.name = name;
+  if (email) staff.email = email;
+  if (phonenumber) staff.phonenumber = phonenumber;
+  if (gender) staff.gender = gender;
+  if (role) {
+    console.log(role) 
+    const updatedRole = [role, "user"];
+    staff.role = updatedRole;
+  }
+  await staff.save();
+
+  res.status(200).json({ message: "Thông tin nhân viên đã được cập nhật", staff });
+});
+
+
 
 const getAvgRating = async (req, res) => {
   try {
@@ -649,6 +694,15 @@ const addToppingToGroup = async (req, res) => {
       });
     }
 
+    // Ensure price is stored as a Number
+    const parsedPrice = Number(price);
+    if (isNaN(parsedPrice)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid price format",
+      });
+    }
+
     // Find the topping group
     let toppingGroup = await ToppingGroup.findById(group_id);
     if (!toppingGroup) {
@@ -658,21 +712,27 @@ const addToppingToGroup = async (req, res) => {
       });
     }
 
-    // Add the new topping
-    toppingGroup.toppings.push({ name, price });
+    // Create a new Topping document
+    const newTopping = await Topping.create({
+      name,
+      price: parsedPrice,
+      toppingGroup: group_id, // Associate it with the group
+    });
 
-    // Save the updated group
+    // Push the new topping's ObjectId to the toppingGroup
+    toppingGroup.toppings.push(newTopping._id);
     await toppingGroup.save();
 
     return res.status(200).json({
       success: true,
       message: "Topping added successfully",
-      data: toppingGroup,
+      data: newTopping, // Returning the created topping
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 const removeToppingFromGroup = async (req, res) => {
   try {
@@ -815,26 +875,26 @@ const addToppingToDish = async (req, res) => {
 
 const updateOrder = async (req, res) => {
   try {
-      const { order_id } = req.params; // Get order ID from the request parameters
-      const updatedData = req.body; // Get the updated data from the request body
+    const { order_id } = req.params; // Get order ID from the request parameters
+    const updatedData = req.body; // Get the updated data from the request body
 
-      // Ensure the order exists
-      const order = await Order.findById(order_id);
-      if (!order) {
-          return res.status(404).json({ message: "Order not found" });
-      }
+    // Ensure the order exists
+    const order = await Order.findById(order_id);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
 
-      // Update the order with new data
-      Object.assign(order, updatedData);
-      await order.save();
+    // Update the order with new data
+    Object.assign(order, updatedData);
+    await order.save();
 
-      return res.status(200).json({
-          message: "Order updated successfully",
-          data: order,
-      });
+    return res.status(200).json({
+      message: "Order updated successfully",
+      data: order,
+    });
   } catch (error) {
-      console.error("Error updating order:", error);
-      return res.status(500).json({ message: "Internal server error" });
+    console.error("Error updating order:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -929,6 +989,185 @@ const createCategory = async (req, res) => {
   }
 };
 
+const updateCategory = async (req, res) => {
+  try {
+    const { category_id } = req.params;
+    const { name } = req.body;
+
+    // Validate input
+    if (!name) {
+      return res.status(400).json({ message: "Category name is required" });
+    }
+
+    // Find and update category
+    const updatedCategory = await Category.findByIdAndUpdate(
+      category_id,
+      { name },
+      { new: true } // Return updated document
+    );
+
+    if (!updatedCategory) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    res.status(200).json({ message: "Category updated", category: updatedCategory });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+const deleteCategory = async (req, res) => {
+  try {
+    const { category_id } = req.params;
+
+    // Find and delete category
+    const deletedCategory = await Category.findByIdAndDelete(category_id);
+
+    if (!deletedCategory) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    res.status(200).json({ message: "Category deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+const updateTopping = async (req, res) => {
+  try {
+    const { group_id, topping_id } = req.params;
+    const { name, price } = req.body;
+
+    // Validate input
+    if (!name || price == null) {
+      return res.status(400).json({ success: false, message: "Name and price are required" });
+    }
+
+    // Find and update the topping
+    const updatedTopping = await Topping.findOneAndUpdate(
+      { _id: topping_id, toppingGroup: group_id },
+      { name, price },
+      { new: true }
+    );
+
+    if (!updatedTopping) {
+      return res.status(404).json({ success: false, message: "Topping not found" });
+    }
+
+    res.status(200).json({ success: true, data: updatedTopping });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+
+const updateStore = async (req, res) => {
+  try {
+    const { store_id } = req.params;
+    const updates = req.body;
+    
+    if (!store_id || !updates) {
+      return res.status(400).json({ message: "Store ID and updates are required." });
+    }
+
+    // Ensure only allowed fields are updated
+    const allowedUpdates = [
+      "name",
+      "description",
+      "address",
+      "storeCategory",
+      "avatar",
+      "cover",
+      "paperWork.storePicture",
+    ];
+    
+    const filteredUpdates = {};
+    
+    allowedUpdates.forEach((key) => {
+      if (updates[key] !== undefined) {
+        filteredUpdates[key] = updates[key];
+      }
+    });
+
+    const store = await Store.findByIdAndUpdate(
+      store_id,
+      { $set: filteredUpdates },
+      { new: true, runValidators: true }
+    );
+
+    if (!store) {
+      return res.status(404).json({ message: "Store not found." });
+    }
+
+    res.status(200).json({ message: "Store updated successfully.", store });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+const registerStore = asyncHandler(async (req, res) => {
+  const {
+    name,
+    description,
+    address,
+    storeCategory,
+    avatar,
+    cover,
+    paperWork,
+    staff,
+  } = req.body;
+
+  const userId = req.user._id; // Authenticated user ID
+
+  if (!name || !address?.full_address) {
+    return res.status(400).json({ message: "Tên cửa hàng và địa chỉ là bắt buộc." });
+  }
+
+  // Check if store name already exists
+  const existingStore = await Store.findOne({ name });
+  if (existingStore) {
+    return res.status(400).json({ message: "Tên cửa hàng đã tồn tại!" });
+  }
+
+  // Validate store categories
+  let categoryIds = [];
+  if (storeCategory && storeCategory.length > 0) {
+    const validCategories = await FoodType.find({ _id: { $in: storeCategory } });
+    if (validCategories.length !== storeCategory.length) {
+      return res.status(400).json({ message: "Danh mục không hợp lệ!" });
+    }
+    categoryIds = validCategories.map((c) => c._id);
+  }
+
+  // Create store
+  const store = await Store.create({
+    name,
+    owner: userId,
+    description,
+    address,
+    storeCategory: categoryIds,
+    avatar,
+    cover,
+    paperWork,
+    staff: staff || [],
+  });
+
+  // Assign "storeOwner" role to the user
+  const user = await User.findById(userId);
+  if (!user) return res.status(404).json({ message: "Người dùng không tồn tại" });
+
+  if (!user.role.includes("storeOwner")) {
+    user.role.push("storeOwner");
+    await user.save();
+  }
+
+  res.status(201).json({ message: "Cửa hàng đã được đăng ký thành công!", store });
+});
+
+
+
 module.exports = {
   getAllDish,
   getStoreInformation,
@@ -956,4 +1195,11 @@ module.exports = {
   updateDish,
   createDish,
   createCategory,
+  updateCategory,
+  deleteCategory,
+  updateTopping,
+  createStaff,
+  updateStaff,
+  updateStore,
+  registerStore,
 };
