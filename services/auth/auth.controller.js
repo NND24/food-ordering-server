@@ -67,13 +67,14 @@ const registerShipper = asyncHandler(async (req, res, next) => {
 
 const login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
-  const { getRole } = req.query; // Get query param for role
+  const { getRole, getStore } = req.query; // Get query params for role and store info
 
   if (!email || !password) {
     next(createError(400, "Vui lòng điền đầy đủ thông tin"));
   }
 
   const findUser = await User.findOne({ email: email });
+
   if (findUser && (await findUser.isPasswordMatched(password))) {
     const refreshToken = generateRefreshToken(findUser._id);
     await User.findByIdAndUpdate(
@@ -81,6 +82,11 @@ const login = asyncHandler(async (req, res, next) => {
       { refreshToken: refreshToken },
       { new: true }
     );
+    // Check if the user is associated with a store
+    const store = await Store.findOne({
+      $or: [{ owner: findUser._id }, { staff: findUser._id }],
+    }).select("_id name");
+
     res.cookie("refreshToken", refreshToken, {
       maxAge: 30 * 24 * 60 * 60 * 1000,
       httpOnly: true,
@@ -89,6 +95,7 @@ const login = asyncHandler(async (req, res, next) => {
       _id: findUser._id,
       token: generateAccessToken(findUser._id),
       ...(getRole === "true" && { role: findUser.role }), // Include role if getRole is true
+      ...(getStore === "true" && store && { storeId: store._id}), // Include storeId & name if requested
     });
   } else {
     return next(createError(401, "Email hoặc mật khẩu không hợp lệ!"));
