@@ -4,8 +4,8 @@ const { getUserFavorite, addFavorite, removeFavorite, removeAllFavorite } = requ
 const router = express.Router();
 
 router.get("/", authMiddleware, getUserFavorite);
-router.post("/add", authMiddleware, addFavorite);
-router.post("/remove", authMiddleware, removeFavorite);
-router.post("/remove-all", authMiddleware, removeAllFavorite);
+router.post("/add/:storeId", authMiddleware, addFavorite);
+router.delete("/remove/:storeId", authMiddleware, removeFavorite);
+router.delete("/remove-all", authMiddleware, removeAllFavorite);
 
 module.exports = router;

@@ -49,7 +49,7 @@ const getUserFavorite = async (req, res) => {
 const addFavorite = async (req, res) => {
   try {
     const userId = req?.user?._id;
-    const { storeId } = req.body;
+    const { storeId } = req.params;
 
     if (!userId) {
       return res.status(401).json({ success: false, message: "User not found" });
@@ -101,7 +101,7 @@ const addFavorite = async (req, res) => {
 const removeFavorite = async (req, res) => {
   try {
     const userId = req?.user?._id;
-    const { storeId } = req.body;
+    const { storeId } = req.params;
 
     if (!userId) {
       return res.status(401).json({ success: false, message: "User not found" });
