@@ -5,7 +5,7 @@ const asyncHandler = require("express-async-handler");
 
 const getAllEmployees = asyncHandler(async (req, res, next) => {
   try {
-    const getEmployees = await Employee.find({}).select("name email phonenumber gender avatar role");
+    const getEmployees = await Employee.find({}).select("name email phonenumber gender avatar status role");
 
     res.json(getEmployees);
   } catch (error) {
@@ -106,5 +106,21 @@ const blockEmployee = asyncHandler(async (req, res, next) => {
   }
 });
 
+const approveEmployee = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+
+  try {
+    const employee = await Employee.findByIdAndUpdate(id, { status: "APPROVED" }, { new: true });
+
+    if (!employee) {
+      return next(createError(404, "Employee not found"));
+    }
+
+    res.json({ message: "Employee account has been approved", employee });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = { getAllEmployees, getEmployee, addEmployee, updateEmployee, 
-                  deleteEmployee, blockEmployee, changeRoles };
+                  deleteEmployee, blockEmployee, approveEmployee, changeRoles };

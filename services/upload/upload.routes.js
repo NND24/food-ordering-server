@@ -15,7 +15,7 @@ router.post(
   uploadAvatarShipperImage
 );
 router.post("/images", authMiddleware, validateMongoDbId("id"), uploadToFirebase.array("file", 10), uploadImages);
-
+router.post("/avatar/shipper", uploadToFirebase.array("file", 10), uploadImages);
 router.delete("/delete-file", authMiddleware, deleteFile);
 
 module.exports = router;
