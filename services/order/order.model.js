@@ -8,6 +8,18 @@ var orderSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    customerName: {
+      type: String,
+      trim: true,
+    },
+    customerPhonenumber: {
+      type: String,
+      trim: true,
+    },
+    note: {
+      type: String,
+      trim: true,
+    },
     store: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Store",
@@ -45,6 +57,10 @@ var orderSchema = new mongoose.Schema(
         type: String,
         require: true,
       },
+      detailAddress: {
+        type: String,
+        require: true,
+      },
     },
     shipper: {
       type: mongoose.Schema.Types.ObjectId,
@@ -52,7 +68,18 @@ var orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["preorder", "pending", "confirmed", "preparing", "finished", "taken", "delivering", "delivered", "done", "cancelled"],
+      enum: [
+        "preorder",
+        "pending",
+        "confirmed",
+        "preparing",
+        "finished",
+        "taken",
+        "delivering",
+        "delivered",
+        "done",
+        "cancelled",
+      ],
       default: "pending",
     },
     paymentMethod: {

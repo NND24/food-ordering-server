@@ -4,7 +4,7 @@ const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 const { query } = require("express");
 const mongoose = require("mongoose");
-const { User } = require("../user/user.model")
+const { User } = require("../user/user.model");
 const { getPaginatedData } = require("../../utils/paging");
 
 // [GET] /:store_id/dish
@@ -450,6 +450,26 @@ const getAllRating = async (req, res) => {
   }
 };
 
+const getAllStoreRating = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { limit, page, sort } = req.query;
+
+    let filterOptions = { store: storeId };
+    const result = await getPaginatedData(Rating, filterOptions, "user dishes", parseInt(limit), parseInt(page));
+
+    if (sort === "desc") {
+      result.data = result.data.sort((a, b) => b.ratingValue - a.ratingValue);
+    } else if (sort === "asc") {
+      result.data = result.data.sort((a, b) => a.ratingValue - b.ratingValue);
+    }
+
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 const getAvgStoreRating = async (req, res) => {
   try {
     const { store_id } = req.params;
@@ -524,6 +544,7 @@ const getToppingFromDish = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
 const createToppingGroup = async (req, res) => {
   try {
     const { store_id } = req.params;
@@ -754,6 +775,7 @@ module.exports = {
   getStaff,
   getAvgRating,
   getAllRating,
+  getAllStoreRating,
   getAvgStoreRating,
   getToppingFromDish,
   createToppingGroup,
