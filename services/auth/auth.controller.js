@@ -1,5 +1,5 @@
 const User = require("../user/user.model");
-const {Store} = require("../store/store.model")
+const { Store } = require("../store/store.model");
 const Shipper = require("../shipper/shipper.model");
 const Employee = require("../employee/employee.model");
 const jwt = require("jsonwebtoken");
@@ -24,8 +24,8 @@ const generateRefreshToken = (id) => {
 const storeOwnByUser = asyncHandler(async (req, res, next) => {
   const { _id } = req.user;
   const findStore = await Store.findOne({ owner: _id });
-  res.status(200).json({data: findStore});
-})
+  res.status(200).json({ data: findStore });
+});
 
 const register = asyncHandler(async (req, res, next) => {
   const { name, email, phonenumber, gender, password } = req.body;
@@ -45,20 +45,28 @@ const register = asyncHandler(async (req, res, next) => {
 });
 
 const registerShipper = asyncHandler(async (req, res, next) => {
-  const { name, email, phonenumber, gender, password } = req.body;
+  const { name, email, phonenumber, gender, password, avatar } = req.body;
+
+  // Kiểm tra email đã tồn tại chưa
   const findShipper = await Shipper.findOne({ email });
-  if (!findShipper) {
-    await Shipper.create({
-      name,
-      email,
-      phonenumber,
-      gender,
-      password,
-    });
-    res.status(201).json("Tạo tài khoản thành công");
-  } else {
-    next(createError(409, "Tài khoản đã tồn tại"));
+  if (findShipper) {
+    return next(createError(409, "Tài khoản đã tồn tại"));
   }
+
+  // Tạo tài khoản shipper mới, thêm avatar vào database
+  const newShipper = await Shipper.create({
+    name,
+    email,
+    phonenumber,
+    gender,
+    password,
+    avatar: avatar || { url: "" }, // Nếu không có ảnh thì để trống
+  });
+
+  res.status(201).json({
+    message: "Tạo tài khoản thành công",
+    shipperId: newShipper._id,
+  });
 });
 
 const login = asyncHandler(async (req, res, next) => {
@@ -127,6 +135,10 @@ const loginShipper = asyncHandler(async (req, res, next) => {
   }
 
   const findShipper = await Shipper.findOne({ email: email });
+  
+  if (findShipper.status !== "APPROVED") {
+    return next(createError(403, "Tài khoản chưa được phê duyệt!"));
+  }
   if (findShipper && (await findShipper.isPasswordMatched(password))) {
     const refreshToken = generateRefreshToken(findShipper._id);
     await User.findByIdAndUpdate(
@@ -290,11 +302,16 @@ const getRefreshToken = asyncHandler(async (req, res, next) => {
   const refreshToken = cookie.refreshToken;
   const user = await User.findOne({ refreshToken });
   if (!user) {
-    return next(createError(404, "No refresh token present in database or not matched"));
+    return next(
+      createError(404, "No refresh token present in database or not matched")
+    );
   }
 
   jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, decoded) => {
-    if (err || user.id !== decoded.id) return next(createError("400", "There is something wrong with refresh token"));
+    if (err || user.id !== decoded.id)
+      return next(
+        createError("400", "There is something wrong with refresh token")
+      );
     const accessToken = generateAccessToken(user?._id);
     res.status(200).json({ accessToken });
   });
@@ -302,12 +319,16 @@ const getRefreshToken = asyncHandler(async (req, res, next) => {
 
 const logout = asyncHandler(async (req, res, next) => {
   const cookie = req.cookies;
-  if (!cookie?.refreshToken) return next(createError(204, "No refresh token in cookies"));
+  if (!cookie?.refreshToken)
+    return next(createError(204, "No refresh token in cookies"));
 
   const refreshToken = cookie.refreshToken;
   const user = await User.findOne({ refreshToken });
   if (user) {
-    await User.findOneAndUpdate({ refreshToken }, { $set: { refreshToken: null } });
+    await User.findOneAndUpdate(
+      { refreshToken },
+      { $set: { refreshToken: null } }
+    );
   }
 
   res.clearCookie("refreshToken", {
@@ -351,7 +372,12 @@ const forgotPassword = asyncHandler(async (req, res, next) => {
   const { email } = req.body;
   const user = await User.findOne({ email, isGoogleLogin: false });
   if (!user)
-    return next(createError("404", "Tài khoản không tồn tại hoặc tài khoản được đăng nhập bằng phương thức khác"));
+    return next(
+      createError(
+        "404",
+        "Tài khoản không tồn tại hoặc tài khoản được đăng nhập bằng phương thức khác"
+      )
+    );
 
   const otp = await user.createOtp();
   await user.save();
@@ -380,13 +406,79 @@ const checkOTP = asyncHandler(async (req, res, next) => {
     otpExpires: { $gt: Date.now() },
   });
 
-  if (!user) return next(createError("400", "OPT đã hết hạn hoặc không đúng mã, vui lòng thử lại"));
+  if (!user)
+    return next(
+      createError("400", "OPT đã hết hạn hoặc không đúng mã, vui lòng thử lại")
+    );
 
   user.otp = undefined;
   user.otpExpires = undefined;
   await user.save();
 
   res.status(200).json("OTP hợp lệ");
+});
+
+const forgotPasswordShipper = asyncHandler(async (req, res, next) => {
+  const { email } = req.body;
+  const shipper = await Shipper.findOne({ email, isGoogleLogin: false });
+  if (!shipper)
+    return next(
+      createError(
+        "404",
+        "Tài khoản không tồn tại hoặc tài khoản được đăng nhập bằng phương thức khác"
+      )
+    );
+
+  const otp = await shipper.createOtp();
+  await shipper.save();
+
+  const resetURL = `
+      <p>Mã OTP của bạn là: ${otp}</p>
+      <p>Vui lòng nhập mã này để lấy lại mật khẩu. OTP sẽ hết hạn trong 2 phút</p>
+    `;
+  const data = {
+    to: email,
+    text: "",
+    subject: "Forgot Password OTP",
+    html: resetURL,
+  };
+  await sendEmail(data);
+  res.status(200).json("Send email successfully");
+});
+
+
+const checkOTPForShipper = asyncHandler(async (req, res, next) => {
+  const { email, otp } = req.body;
+  const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
+
+  const shipper = await Shipper.findOne({
+    email,
+    otp: hashedOTP,
+    otpExpires: { $gt: Date.now() },
+  });
+
+  if (!shipper)
+    return next(
+      createError("400", "OPT đã hết hạn hoặc không đúng mã, vui lòng thử lại")
+    );
+
+  shipper.otp = undefined;
+  shipper.otpExpires = undefined;
+  await shipper.save();
+
+  res.status(200).json("OTP hợp lệ");
+});
+
+const resetPasswordShipper = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
+
+  const shipper = await Shipper.findOne({ email });
+  if (!shipper) return next(createError(404, "Shipper not found"));
+
+  shipper.password = password;
+  await shipper.save();
+
+  res.status(200).json("Đổi mật khẩu thành công!");
 });
 
 module.exports = {
@@ -403,5 +495,8 @@ module.exports = {
   resetPassword,
   forgotPassword,
   checkOTP,
-  storeOwnByUser
+  storeOwnByUser,
+  forgotPasswordShipper,
+  checkOTPForShipper,
+  resetPasswordShipper
 };

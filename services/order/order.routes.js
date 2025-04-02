@@ -9,6 +9,7 @@ const {
   getOnGoingOrder,
   updateOrderStatus,
   getDeliveredOrders,
+  getShipperOrders,
 } = require("./order.controller");
 const router = express.Router();
 
@@ -22,6 +23,8 @@ router.get(
   validateMongoDbId("orderId"),
   getOrderDetail
 );
+
+router.get("/shipper/:shipperId",validateMongoDbId("shipperId"), getShipperOrders);
 router.put("/:orderId/accept", authMiddleware, acceptOrder);
 router.put("/:orderId/update-status", authMiddleware, updateOrderStatus);
 

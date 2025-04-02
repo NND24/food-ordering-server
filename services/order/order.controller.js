@@ -88,6 +88,7 @@ const getFinishedOrders = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
+    count: finishedOrders.length,
     data: finishedOrders,
   });
 });
@@ -260,6 +261,36 @@ const getDeliveredOrders = asyncHandler(async (req, res, next) => {
   }
 });
 
+const getShipperOrders = asyncHandler(async (req, res, next) => {
+  try {
+    const { shipperId } = req.params;
+    if (!shipperId) {
+      return next(createError(400, "Shipper ID không hợp lệ"));
+    }
+
+    // Lấy tất cả đơn hàng của shipper này
+    const allOrders = await Order.find({ shipper: shipperId, status: "finished" });
+
+    // Lọc ra đơn hàng của tháng hiện tại
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+    
+    const ordersThisMonth = allOrders.filter((order) => {
+      const orderDate = new Date(order.createdAt);
+      return orderDate.getMonth() + 1 === currentMonth && orderDate.getFullYear() === currentYear;
+    });
+
+    res.status(200).json({
+      success: true,
+      totalOrders: allOrders.length, // Tổng số đơn hàng shipper đã nhận
+      monthlyOrders: ordersThisMonth.length, // Số đơn hàng trong tháng này
+    });
+  } catch (error) {
+    next(createError(500, "Lỗi khi lấy dữ liệu đơn hàng của shipper"));
+  }
+});
+
+
 module.exports = {
   getUserOrder,
   getOrderDetail,
@@ -268,4 +299,5 @@ module.exports = {
   getOnGoingOrder,
   updateOrderStatus,
   getDeliveredOrders,
+  getShipperOrders,
 };
