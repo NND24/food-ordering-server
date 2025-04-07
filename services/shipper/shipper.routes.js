@@ -11,11 +11,12 @@ const {
   blockShipper,
   verifyOldPassword,
   resetPassword,
-  getPendingShippers
+  getPendingShippers,
+  getShipperStats
 } = require("./shipper.controller");
 
 const router = express.Router();
-
+router.get("/stats", verifyToken, getShipperStats);
 router.get("/", getAllShippers);
 router.get("/pending", getPendingShippers);
 router.get("/:id", validateMongoDbId("id"), getShipper);

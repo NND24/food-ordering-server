@@ -46,4 +46,35 @@ const deleteUser = asyncHandler(async (req, res, next) => {
     next(error);
   }
 });
-module.exports = { getAllUser, getUser, updateUser, deleteUser };
+
+const getUserStats = asyncHandler(async (req, res, next) => {
+  try {
+    const totalUsers = await User.countDocuments({ role: "user" });
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const endOfMonth = new Date(startOfMonth);
+    endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+    const newUsersThisMonth = await User.countDocuments({
+      role: "user",
+      createdAt: {
+        $gte: startOfMonth,
+        $lt: endOfMonth,
+      },
+    });
+
+    res.status(200).json({
+      code: 200,
+      message: "Lấy thống kê người dùng thành công",
+      data: {
+        totalUsers,
+        newUsersThisMonth,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+module.exports = { getAllUser, getUser, updateUser, deleteUser, getUserStats};
