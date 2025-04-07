@@ -153,6 +153,12 @@ var ratingSchema = new mongoose.Schema(
       ref: "Store",
       required: true,
     },
+    dishes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Dish",
+      },
+    ],
     ratingValue: {
       type: Number,
       required: true,
