@@ -269,15 +269,21 @@ const getShipperOrders = asyncHandler(async (req, res, next) => {
     }
 
     // Lấy tất cả đơn hàng của shipper này
-    const allOrders = await Order.find({ shipper: shipperId, status: "finished" });
+    const allOrders = await Order.find({
+      shipper: shipperId,
+      status: "finished",
+    });
 
     // Lọc ra đơn hàng của tháng hiện tại
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
-    
+
     const ordersThisMonth = allOrders.filter((order) => {
       const orderDate = new Date(order.createdAt);
-      return orderDate.getMonth() + 1 === currentMonth && orderDate.getFullYear() === currentYear;
+      return (
+        orderDate.getMonth() + 1 === currentMonth &&
+        orderDate.getFullYear() === currentYear
+      );
     });
 
     res.status(200).json({
@@ -290,6 +296,75 @@ const getShipperOrders = asyncHandler(async (req, res, next) => {
   }
 });
 
+const getOrderStats = asyncHandler(async (req, res, next) => {
+  try {
+    const totalOrders = await Order.countDocuments();
+
+    // Lấy thời gian đầu và cuối của tháng hiện tại
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const endOfMonth = new Date(startOfMonth);
+    endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+
+    const ordersThisMonth = await Order.countDocuments({
+      createdAt: {
+        $gte: startOfMonth,
+        $lt: endOfMonth,
+      },
+    });
+
+    res.status(200).json({
+      code: 200,
+      message: "Lấy thống kê đơn hàng thành công",
+      data: {
+        totalOrders,
+        ordersThisMonth,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const getMonthlyOrderStats = asyncHandler(async (req, res, next) => {
+  try {
+    const stats = await Order.aggregate([
+      {
+        $group: {
+          _id: { $month: "$createdAt" },
+          total: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          month: "$_id",
+          total: 1,
+          _id: 0,
+        },
+      },
+      { $sort: { month: 1 } },
+    ]);
+
+    // Chuyển thành array đủ 12 tháng
+    const fullStats = Array.from({ length: 12 }, (_, i) => {
+      const stat = stats.find((s) => s.month === i + 1);
+      return {
+        name: `Tháng ${i + 1}`,
+        total: stat ? stat.total : 0,
+      };
+    });
+
+    res.status(200).json({
+      code: 200,
+      message: "Lấy thống kê đơn hàng theo tháng thành công",
+      data: fullStats,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 module.exports = {
   getUserOrder,
@@ -300,4 +375,6 @@ module.exports = {
   updateOrderStatus,
   getDeliveredOrders,
   getShipperOrders,
+  getOrderStats,
+  getMonthlyOrderStats
 };

@@ -140,6 +140,37 @@ const getPendingShippers = asyncHandler(async (req, res, next) => {
   }
 });
 
+const getShipperStats = asyncHandler(async (req, res, next) => {
+  try {
+    const totalShippers = await Shipper.countDocuments();
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const endOfMonth = new Date(startOfMonth);
+    endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+
+    const shippersThisMonth = await Shipper.countDocuments({
+      createdAt: {
+        $gte: startOfMonth,
+        $lt: endOfMonth,
+      },
+    });
+
+    res.status(200).json({
+      code: 200,
+      message: "Lấy thống kê shipper thành công",
+      data: {
+        totalShippers,
+        shippersThisMonth,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = {
   getAllShippers,
   getShipper,
@@ -150,4 +181,5 @@ module.exports = {
   verifyOldPassword,
   resetPassword,
   getPendingShippers,
+  getShipperStats
 };

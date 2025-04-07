@@ -9,6 +9,7 @@ const verifyToken = (req, res, next) => {
 
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) return next(createError(403, "Token không hợp lệ"));
+    console.log("Decoded JWT:", user);
     req.user = user; // Gán user vào request
     next();
   });

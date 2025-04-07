@@ -1,5 +1,6 @@
 const express = require("express");
 const authMiddleware = require("../../middlewares/authMiddleware");
+const { verifyToken } = require("../../middlewares/authMiddlewareAdmin");
 const {
   getAllStore,
   getAllDish,
@@ -32,11 +33,14 @@ const {
   // updateStore,
   // updateToppingGroup,
   // updateCategory,
-  // updateStaff
+  // updateStaff,
+  getStoreStats,
 } = require("./store.controller");
 
 const router = express.Router();
 
+// Stats
+router.get("/stats", verifyToken, getStoreStats);
 // Store routes
 router.get("/", getAllStore);
 router.get("/:store_id", getStoreInformation); // CHECK
@@ -49,7 +53,10 @@ router.get("/dish/:dish_id", getDish); // CHECK
 router.get("/dish/:dish_id/rating/avg", getAvgRating); // CHECK
 router.get("/dish/:dish_id/rating/", getAllRating); // CHECK
 router.get("/:store_id/rating/avg", getAvgStoreRating); // CHECK
+<<<<<<< HEAD
+=======
 router.get("/:storeId/rating", getAllStoreRating);
+>>>>>>> 702b08604257ca43dbf15ca6f0b4dae95d8466f3
 router.get("/dish/:dish_id/topping", getToppingFromDish); // CHECK
 router.post("/dish/:dish_id/topping", addToppingToDish); // CHECK
 // router.post("/:store_id/dish/add", createDish);
@@ -59,7 +66,10 @@ router.post("/dish/:dish_id/topping", addToppingToDish); // CHECK
 router.get("/:store_id/topping", getAllTopping); // CHECK
 router.get("/topping-group/:group_id", getTopping); // CHECK
 router.post("/topping-group/:group_id/topping", addToppingToGroup); // CHECK
-router.delete("/topping-group/:group_id/topping/:topping_id", removeToppingFromGroup); // CHECK
+router.delete(
+  "/topping-group/:group_id/topping/:topping_id",
+  removeToppingFromGroup
+); // CHECK
 router.delete("/topping-group/:group_id", deleteToppingGroup); // CHECK
 
 router.post("/:store_id/topping/create", createToppingGroup); // CHECK
@@ -80,5 +90,10 @@ router.get("/staff/:staff_id", getStaff); // CHECK
 // Order routes
 router.get("/:store_id/order", getAllOrder); // CHECK
 router.get("/order/:order_id", getOrder); // CHECK
+<<<<<<< HEAD
+
+
+=======
+>>>>>>> 702b08604257ca43dbf15ca6f0b4dae95d8466f3
 
 module.exports = router;
