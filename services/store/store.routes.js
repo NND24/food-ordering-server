@@ -1,6 +1,9 @@
 const express = require("express");
 const authMiddleware = require("../../middlewares/authMiddleware");
-const { verifyToken } = require("../../middlewares/authMiddlewareAdmin");
+const {
+  authorize,
+  verifyToken,
+} = require("../../middlewares/authMiddlewareAdmin");
 const {
   getAllStore,
   getAllDish,
@@ -35,6 +38,8 @@ const {
   // updateCategory,
   // updateStaff,
   getStoreStats,
+  getPendingStores,
+  approveStore,
 } = require("./store.controller");
 
 const router = express.Router();
@@ -42,7 +47,19 @@ const router = express.Router();
 // Stats
 router.get("/stats", verifyToken, getStoreStats);
 // Store routes
+router.get(
+  "/pending",
+  verifyToken,
+  authorize(["ADMIN", "STORE"]),
+  getPendingStores
+);
 router.get("/", getAllStore);
+router.patch(
+  "/:store_id/approve",
+  verifyToken,
+  authorize(["ADMIN", "STORE"]),
+  approveStore
+);
 router.get("/:store_id", getStoreInformation); // CHECK
 // router.post("/add", createStore);
 // router.put("/update", updateStore);
@@ -53,10 +70,6 @@ router.get("/dish/:dish_id", getDish); // CHECK
 router.get("/dish/:dish_id/rating/avg", getAvgRating); // CHECK
 router.get("/dish/:dish_id/rating/", getAllRating); // CHECK
 router.get("/:store_id/rating/avg", getAvgStoreRating); // CHECK
-<<<<<<< HEAD
-=======
-router.get("/:storeId/rating", getAllStoreRating);
->>>>>>> 702b08604257ca43dbf15ca6f0b4dae95d8466f3
 router.get("/dish/:dish_id/topping", getToppingFromDish); // CHECK
 router.post("/dish/:dish_id/topping", addToppingToDish); // CHECK
 // router.post("/:store_id/dish/add", createDish);
@@ -90,10 +103,5 @@ router.get("/staff/:staff_id", getStaff); // CHECK
 // Order routes
 router.get("/:store_id/order", getAllOrder); // CHECK
 router.get("/order/:order_id", getOrder); // CHECK
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 702b08604257ca43dbf15ca6f0b4dae95d8466f3
 
 module.exports = router;
