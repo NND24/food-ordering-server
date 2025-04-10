@@ -75,6 +75,7 @@ const getFinishedOrders = asyncHandler(async (req, res, next) => {
     .populate({ path: "store" })
     .populate("items.dish")
     .populate("items.toppings")
+    .populate({ path: "user"})
     .sort({ updatedAt: -1 });
 
   if (!finishedOrders || finishedOrders.length === 0) {

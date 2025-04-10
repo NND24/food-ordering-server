@@ -525,7 +525,13 @@ const getAllStoreRating = async (req, res) => {
     const { limit, page, sort } = req.query;
 
     let filterOptions = { store: storeId };
-    const result = await getPaginatedData(Rating, filterOptions, "user dishes", parseInt(limit), parseInt(page));
+    const result = await getPaginatedData(
+      Rating,
+      filterOptions,
+      "user dishes",
+      parseInt(limit),
+      parseInt(page)
+    );
 
     if (sort === "desc") {
       result.data = result.data.sort((a, b) => b.ratingValue - a.ratingValue);
@@ -869,6 +875,37 @@ const getStoreStats = asyncHandler(async (req, res, next) => {
   }
 });
 
+const getPendingStores = asyncHandler(async (req, res, next) => {
+  try {
+    const pendingStores = await Store.find({ status: "PENDING" })
+      .populate("owner", "name email phonenumber")
+      .populate("storeCategory", "name");
+    res.json(pendingStores);
+  } catch (error) {
+    next(error);
+  }
+});
+
+const approveStore = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+
+  try {
+    const store = await Store.findByIdAndUpdate(
+      id,
+      { status: "APPROVED" },
+      { new: true }
+    );
+
+    if (!store) {
+      return next(createError(404, "Cannot find store"));
+    }
+
+    res.json({ message: "Store approved", store });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = {
   getAllDish,
   getStoreInformation,
@@ -892,5 +929,7 @@ module.exports = {
   deleteToppingGroup,
   addToppingToDish,
   getAllStore,
-  getStoreStats
+  getStoreStats,
+  getPendingStores,
+  approveStore,
 };

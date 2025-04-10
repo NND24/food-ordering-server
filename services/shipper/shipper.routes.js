@@ -12,6 +12,7 @@ const {
   verifyOldPassword,
   resetPassword,
   getPendingShippers,
+  getCurrentShippers,
   getShipperStats
 } = require("./shipper.controller");
 
@@ -19,6 +20,7 @@ const router = express.Router();
 router.get("/stats", verifyToken, getShipperStats);
 router.get("/", getAllShippers);
 router.get("/pending", getPendingShippers);
+router.get("/current", getCurrentShippers);
 router.get("/:id", validateMongoDbId("id"), getShipper);
 
 router.put("/", authMiddleware, updateShipper);

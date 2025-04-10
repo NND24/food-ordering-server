@@ -140,6 +140,18 @@ const getPendingShippers = asyncHandler(async (req, res, next) => {
   }
 });
 
+const getCurrentShippers = asyncHandler(async (req, res, next) => {
+  try {
+    const currentShipper = await Shipper.find({
+      status: { $in: ["APPROVED", "BLOCKED"] },
+    }).select("name email phonenumber gender avatar status");
+
+    res.json(currentShipper);
+  } catch (error) {
+    next(error);
+  }
+});
+
 const getShipperStats = asyncHandler(async (req, res, next) => {
   try {
     const totalShippers = await Shipper.countDocuments();
@@ -181,5 +193,6 @@ module.exports = {
   verifyOldPassword,
   resetPassword,
   getPendingShippers,
-  getShipperStats
+  getCurrentShippers,
+  getShipperStats,
 };
