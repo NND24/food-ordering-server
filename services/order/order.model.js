@@ -72,7 +72,7 @@ var orderSchema = new mongoose.Schema(
         "preorder",
         "pending",
         "confirmed",
-        "preparing",
+        "preparing", // Confirm and preparing are the same
         "finished",
         "taken",
         "delivering",

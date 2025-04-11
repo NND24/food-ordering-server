@@ -213,32 +213,60 @@ const getAllStaff = asyncHandler(async (req, res, next) => {
 
 const getAllOrder = async (req, res) => {
   try {
-    const { status, limit, page } = req.query;
-    let filterOptions = {};
+    const { status, limit, page, name } = req.query;
+    const { store_id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(store_id)) {
+      return res.status(400).json({ success: false, message: "Invalid store_id format" });
+    }
+
+    let filterOptions = { store: store_id };
+
     if (status) {
       const statusArray = Array.isArray(status) ? status : status.split(",");
       filterOptions.status = { $in: statusArray };
     }
 
-    // Fully populate orders to match getOrderDetail
+    // Add search filter if name query is present
+    if (name && name.trim() !== "") {
+      const regex = new RegExp(name, "i"); // Case-insensitive search
+      filterOptions.$or = [
+        { customerName: regex },
+        { customerPhonenumber: regex },
+      ];
+    }
+
     const response = await getPaginatedData(
       Order,
       filterOptions,
       [
-        { path: "store" },  // Include store details
-        { path: "user", select: "name email avatar" }, // Include user details
-        { path: "items.dish", select: "name price image description" }, // Include dish details
-        { path: "items.toppings", select: "name price" } // Include toppings details
+        { path: "store" },
+        { path: "user", select: "name email avatar" },
+        { path: "items.dish", select: "name price image description" },
+        { path: "items.toppings", select: "name price" },
+        { path: "shipper", select: "name email avatar" }
       ],
       limit,
       page
     );
+
+    // Filter again in memory to support search on user.name
+    if (name && name.trim() !== "") {
+      const regex = new RegExp(name, "i");
+      response.data = response.data.filter(order =>
+        order.user?.name?.match(regex) ||
+        order.customerName?.match(regex) ||
+        order.customerPhonenumber?.match(regex)
+      )
+    }
 
     res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
 
 
 // [GET] /order/[order_id]
@@ -601,9 +629,8 @@ const getToppingFromDish = async (req, res) => {
   try {
     const { dish_id } = req.params;
 
-    // Fetch the dish with its topping groups
+    // Fetch the dish with its topping groups and toppings
     const dish = await Dish.findById(dish_id)
-      .populate("toppingGroups")
       .populate({
         path: "toppingGroups",
         populate: {
@@ -618,7 +645,6 @@ const getToppingFromDish = async (req, res) => {
       });
     }
 
-    // Ensure toppings exist
     if (!dish.toppingGroups || dish.toppingGroups.length === 0) {
       return res.status(404).json({
         success: false,
@@ -626,11 +652,24 @@ const getToppingFromDish = async (req, res) => {
       });
     }
 
+    // Sanitize: remove toppingGroup field from each topping
+    const cleanedToppingGroups = dish.toppingGroups.map(group => {
+      const cleanedToppings = group.toppings.map(topping => {
+        const { toppingGroup, ...rest } = topping.toObject(); // Remove toppingGroup
+        return rest;
+      });
+      return {
+        ...group.toObject(),
+        toppings: cleanedToppings
+      };
+    });
+
     return res.status(200).json({
       success: true,
       message: "Toppings retrieved successfully",
-      data: dish.toppingGroups,
+      data: cleanedToppingGroups,
     });
+
   } catch (error) {
     if (error.name === "CastError") {
       return res.status(400).json({
@@ -641,6 +680,7 @@ const getToppingFromDish = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 const createToppingGroup = async (req, res) => {
   try {
@@ -875,28 +915,36 @@ const addToppingToDish = async (req, res) => {
 
 const updateOrder = async (req, res) => {
   try {
-    const { order_id } = req.params; // Get order ID from the request parameters
-    const updatedData = req.body; // Get the updated data from the request body
+    const { order_id } = req.params;
+    const updatedData = req.body;
 
-    // Ensure the order exists
     const order = await Order.findById(order_id);
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    // Update the order with new data
-    Object.assign(order, updatedData);
+    // Filter out empty strings or undefined/null fields
+    const filteredData = {};
+    for (const key in updatedData) {
+      const value = updatedData[key];
+      if (value !== "" && value !== null && value !== undefined) {
+        filteredData[key] = value;
+      }
+    }
+    delete filteredData.shipper;
+
+    Object.assign(order, filteredData);
     await order.save();
 
     return res.status(200).json({
       message: "Order updated successfully",
-      data: order,
     });
   } catch (error) {
     console.error("Error updating order:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 const updateDish = async (req, res) => {
   try {

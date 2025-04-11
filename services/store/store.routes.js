@@ -65,6 +65,12 @@ router.post("/dish/:dish_id/topping", addToppingToDish); // CHECK
 router.put("/dish/:dish_id", updateDish)
 router.post("/:store_id/dish/add", createDish);
 
+
+// Order routes
+router.get("/:store_id/order", getAllOrder); // CHECK
+router.get("/order/:order_id", getOrder);  // CHECK
+router.put("/order/:order_id", updateOrder);
+
 // Topping routes
 router.get("/:store_id/topping", getAllTopping); // CHECK
 router.get("/topping-group/:group_id", getTopping); // CHECK
@@ -85,13 +91,10 @@ router.delete("/category/:category_id", deleteCategory);
 
 // Staff routes
 router.get("/:store_id/staff", getAllStaff); // CHECK
-router.get("/:store_id/:staff_id", getStaff); // CHECK
+router.get("/:store_id/staff/:staff_id", getStaff); // CHECK
 router.post("/:store_id/staff/add", createStaff);
 router.put("/:store_id/staff/update", updateStaff);
 
-// Order routes
-router.get("/:store_id/order", getAllOrder); // CHECK
-router.get("/order/:order_id", getOrder);  // CHECK
-router.put("/order/:order_id", updateOrder);
+
 
 module.exports = router;

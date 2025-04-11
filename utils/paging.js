@@ -2,7 +2,7 @@ const getPaginatedData = async (Model, filterOptions = {}, populateFields = [], 
     try {
         let query = Model.find(filterOptions);
 
-        let totalItems = await Model.countDocuments(filterOptions);
+        let totalItems = await Model.countDocuments(filterOptions).collation({ locale: 'vi', strength: 1 });;
         let totalPages = 0;
 
         if (limit && page) {
