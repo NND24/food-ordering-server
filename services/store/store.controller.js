@@ -887,11 +887,11 @@ const getPendingStores = asyncHandler(async (req, res, next) => {
 });
 
 const approveStore = asyncHandler(async (req, res, next) => {
-  const { id } = req.params;
+  const { store_id } = req.params;
 
   try {
     const store = await Store.findByIdAndUpdate(
-      id,
+      store_id,
       { status: "APPROVED" },
       { new: true }
     );
@@ -901,6 +901,39 @@ const approveStore = asyncHandler(async (req, res, next) => {
     }
 
     res.json({ message: "Store approved", store });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const blockedStore = asyncHandler(async (req, res, next) => {
+  const { store_id } = req.params;
+
+  try {
+    const store = await Store.findByIdAndUpdate(
+      store_id,
+      { status: "BLOCKED" },
+      { new: true }
+    );
+
+    if (!store) {
+      return next(createError(404, "Cannot find store"));
+    }
+
+    res.json({ message: "Store blocked", store });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const getOngoingStores = asyncHandler(async (req, res, next) => {
+  try {
+    const stores = await Store.find({
+      status: { $in: ["APPROVED", "BLOCKED"] },
+    })
+      .populate("owner", "name email phonenumber")
+      .populate("storeCategory", "name");
+    res.json(stores);
   } catch (error) {
     next(error);
   }
@@ -932,4 +965,6 @@ module.exports = {
   getStoreStats,
   getPendingStores,
   approveStore,
+  blockedStore,
+  getOngoingStores,
 };

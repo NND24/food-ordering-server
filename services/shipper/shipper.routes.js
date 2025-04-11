@@ -25,7 +25,7 @@ router.get("/:id", validateMongoDbId("id"), getShipper);
 
 router.put("/", authMiddleware, updateShipper);
 
-router.delete("/", authMiddleware, deleteShipper);
+router.delete("/:id", verifyToken, authorize(["ADMIN", "SHIPPER"]), deleteShipper);
 router.post("/verify-password", authMiddleware, verifyOldPassword);
 router.put("/reset-password", authMiddleware, resetPassword);
 

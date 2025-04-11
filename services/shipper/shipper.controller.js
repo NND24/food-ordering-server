@@ -1,4 +1,5 @@
 const Shipper = require("./shipper.model");
+const Order = require("../order/order.model");
 const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 
@@ -45,8 +46,19 @@ const updateShipper = asyncHandler(async (req, res, next) => {
 });
 
 const deleteShipper = asyncHandler(async (req, res, next) => {
-  const shipperId = req?.shipper?._id;
+  const shipperId = req.params.id;
+
   try {
+    // Kiểm tra shipper có đang được sử dụng trong bất kỳ đơn hàng nào không
+    const existingOrder = await Order.findOne({ shipper: shipperId });
+
+    if (existingOrder) {
+      return res.status(400).json({
+        msg: "Cannot delete shipper. This shipper is assigned to at least one order.",
+      });
+    }
+
+    // Nếu không có, thì xóa
     await Shipper.findByIdAndDelete(shipperId);
     res.json({ msg: "Delete Shipper successfully!" });
   } catch (error) {
