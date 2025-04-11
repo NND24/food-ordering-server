@@ -40,6 +40,8 @@ const {
   getStoreStats,
   getPendingStores,
   approveStore,
+  blockedStore,
+  getOngoingStores
 } = require("./store.controller");
 
 const router = express.Router();
@@ -53,13 +55,15 @@ router.get(
   authorize(["ADMIN", "STORE"]),
   getPendingStores
 );
-router.get("/", getAllStore);
-router.patch(
-  "/:store_id/approve",
+router.get(
+  "/ongoing",
   verifyToken,
   authorize(["ADMIN", "STORE"]),
-  approveStore
+  getOngoingStores
 );
+router.get("/", getAllStore);
+router.patch("/:store_id/approve", verifyToken, authorize(["ADMIN", "STORE"]), approveStore);
+router.patch("/:store_id/block", verifyToken, authorize(["ADMIN", "STORE"]), blockedStore);
 router.get("/:store_id", getStoreInformation); // CHECK
 // router.post("/add", createStore);
 // router.put("/update", updateStore);
