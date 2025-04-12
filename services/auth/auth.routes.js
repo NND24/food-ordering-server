@@ -3,7 +3,9 @@ const authMiddleware = require("../../middlewares/authMiddleware");
 const {
   register,
   registerShipper,
-  login, loginAdmin, loginShipper,
+  login,
+  loginAdmin,
+  loginShipper,
   logout,
   getRefreshToken,
   changePassword,
@@ -16,6 +18,8 @@ const {
   forgotPasswordShipper,
   checkOTPForShipper,
   resetPasswordShipper,
+  loginMobile,
+  getRefreshTokenMobile,
 } = require("./auth.controller");
 
 const router = express.Router();
@@ -23,18 +27,20 @@ const router = express.Router();
 router.post("/register", register);
 router.post("/register/shipper", registerShipper);
 router.post("/login", login);
-router.post("/store", authMiddleware, storeOwnByUser)
+router.post("/store", authMiddleware, storeOwnByUser);
 router.post("/login/admin", loginAdmin);
 router.post("/login/shipper", loginShipper);
 router.post("/login/google", googleLoginWithToken);
+router.post("/login/mobile", loginMobile);
 router.post("/login/google/mobile", loginWithGoogleMobile);
 router.post("/forgot-password", forgotPassword);
 router.post("/check-otp", checkOTP);
 router.post("/forgot-password/shipper", forgotPasswordShipper);
 router.post("/check-otp/shipper", checkOTPForShipper);
-router.post("/logout", logout);
+router.get("/logout", logout);
 
 router.get("/refresh", getRefreshToken);
+router.get("/refresh/mobile", getRefreshTokenMobile);
 
 router.put("/change-password", authMiddleware, changePassword);
 router.put("/reset-password", resetPassword);
