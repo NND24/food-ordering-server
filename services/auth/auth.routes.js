@@ -16,6 +16,9 @@ const {
   forgotPasswordShipper,
   checkOTPForShipper,
   resetPasswordShipper,
+  forgotPasswordEmployee,
+  checkOTPForEmployee,
+  resetPasswordEmployee
 } = require("./auth.controller");
 
 const router = express.Router();
@@ -31,7 +34,9 @@ router.post("/login/google/mobile", loginWithGoogleMobile);
 router.post("/forgot-password", forgotPassword);
 router.post("/check-otp", checkOTP);
 router.post("/forgot-password/shipper", forgotPasswordShipper);
+router.post("/forgot-password/employee", forgotPasswordEmployee);
 router.post("/check-otp/shipper", checkOTPForShipper);
+router.post("/check-otp/employee", checkOTPForEmployee);
 router.post("/logout", logout);
 
 router.get("/refresh", getRefreshToken);
@@ -39,5 +44,6 @@ router.get("/refresh", getRefreshToken);
 router.put("/change-password", authMiddleware, changePassword);
 router.put("/reset-password", resetPassword);
 router.put("/reset-password/shipper", resetPasswordShipper);
+router.put("/reset-password/employee", resetPasswordEmployee);
 
 module.exports = router;

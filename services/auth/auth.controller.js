@@ -135,7 +135,7 @@ const loginShipper = asyncHandler(async (req, res, next) => {
   }
 
   const findShipper = await Shipper.findOne({ email: email });
-  
+
   if (findShipper.status !== "APPROVED") {
     return next(createError(403, "Tài khoản chưa được phê duyệt!"));
   }
@@ -446,7 +446,6 @@ const forgotPasswordShipper = asyncHandler(async (req, res, next) => {
   res.status(200).json("Send email successfully");
 });
 
-
 const checkOTPForShipper = asyncHandler(async (req, res, next) => {
   const { email, otp } = req.body;
   const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
@@ -481,6 +480,60 @@ const resetPasswordShipper = asyncHandler(async (req, res, next) => {
   res.status(200).json("Đổi mật khẩu thành công!");
 });
 
+const forgotPasswordEmployee = asyncHandler(async (req, res, next) => {
+  const { email } = req.body;
+  const employee = await Employee.findOne({ email });
+  if (!employee) return next(createError("404", "Account not existed!"));
+
+  const otp = await employee.createOtp();
+  await employee.save();
+
+  const resetURL = `
+      <p>Your otp is: ${otp}</p>
+      <p>Please you this to reset your password. It will be expired in 2 minutes</p>
+    `;
+  const data = {
+    to: email,
+    text: "",
+    subject: "Forgot Password OTP",
+    html: resetURL,
+  };
+  await sendEmail(data);
+  res.status(200).json("Send email successfully");
+});
+
+const checkOTPForEmployee = asyncHandler(async (req, res, next) => {
+  const { email, otp } = req.body;
+  const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
+
+  const employee = await Employee.findOne({
+    email,
+    otp: hashedOTP,
+    otpExpires: { $gt: Date.now() },
+  });
+
+  if (!employee)
+    return next(createError("400", "Your otp is not correct or expired!"));
+
+  employee.otp = undefined;
+  employee.otpExpires = undefined;
+  await employee.save();
+
+  res.status(200).json("OTP valid");
+});
+
+const resetPasswordEmployee = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
+
+  const employee = await Employee.findOne({ email });
+  if (!employee) return next(createError(404, "Employee not found"));
+
+  employee.password = password;
+  await employee.save();
+
+  res.status(200).json("Reset password successfully!");
+});
+
 module.exports = {
   register,
   registerShipper,
@@ -498,5 +551,8 @@ module.exports = {
   storeOwnByUser,
   forgotPasswordShipper,
   checkOTPForShipper,
-  resetPasswordShipper
+  resetPasswordShipper,
+  forgotPasswordEmployee,
+  checkOTPForEmployee,
+  resetPasswordEmployee,
 };
