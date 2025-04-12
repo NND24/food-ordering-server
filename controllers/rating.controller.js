@@ -79,8 +79,8 @@ const editStoreRating = asyncHandler(async (req, res, next) => {
     const updatedRating = await currentRating.save();
 
     res.status(200).json({
+      success: true,
       message: "Rating updated successfully",
-      rating: updatedRating,
     });
   } catch (error) {
     next(createError(500, error.message));
@@ -99,7 +99,7 @@ const deleteStoreRating = asyncHandler(async (req, res, next) => {
     await Rating.findByIdAndDelete(ratingId);
 
     res.status(200).json({
-      success: false,
+      success: true,
       message: "Delete rating successfully",
     });
   } catch (error) {

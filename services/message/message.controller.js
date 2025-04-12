@@ -27,7 +27,10 @@ const sendMessage = asyncHandler(async (req, res, next) => {
       latestMessage: message,
     });
 
-    res.json(message);
+    res.json({
+      success: true,
+      data: newMessage,
+    });
   } catch (error) {
     next(error);
   }
@@ -37,8 +40,16 @@ const getAllMessages = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
   try {
-    const messages = await Message.find({ chat: id }).populate("sender", "name avatar").populate("chat");
-    const chat = await Chat.findById(id).populate("users", "name avatar").populate("latestMessage");
+    const messages = await Message.find({ chat: id }).populate("sender", "name avatar");
+    const chat = await Chat.findById(id)
+      .populate("users", "name avatar")
+      .populate({
+        path: "latestMessage",
+        populate: {
+          path: "sender",
+          select: "name avatar",
+        },
+      });
 
     if (!messages) next(createError(404, "Message not found!"));
 
@@ -52,8 +63,11 @@ const deleteMessage = asyncHandler(async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const deletedMessage = await Message.findByIdAndDelete(id, { new: true });
-    res.json(deletedMessage);
+    await Message.findByIdAndDelete(id, { new: true });
+    res.json({
+      success: true,
+      data: "Delete successful!",
+    });
   } catch (error) {
     next(error);
   }
