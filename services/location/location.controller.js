@@ -19,16 +19,14 @@ const addLocation = asyncHandler(async (req, res, next) => {
       }
     }
 
-    const newLocation = Location.create({
+    Location.create({
       ...req.body,
       user: userId,
     });
 
-    const populatedLocation = await Location.findById(newLocation._id);
-
-    res.status(201).json(populatedLocation);
+    res.status(201).json("Add location successfully");
   } catch (error) {
-    next(error);
+    next(createError(500, error.message));
   }
 });
 
@@ -73,14 +71,9 @@ const updateLocation = asyncHandler(async (req, res, next) => {
       next(createError(404, "Location not found"));
     }
 
-    // Cập nhật location
-    const updatedLocation = await Location.findByIdAndUpdate(
-      id,
-      { $set: req.body },
-      { new: true, runValidators: true }
-    );
+    await Location.findByIdAndUpdate(id, { $set: req.body }, { new: true, runValidators: true });
 
-    res.status(200).json(updatedLocation);
+    res.status(200).json("Update location successfully");
   } catch (error) {
     next(error);
   }
@@ -95,9 +88,9 @@ const deleteLocation = asyncHandler(async (req, res, next) => {
       next(createError(404, "Location not found"));
     }
 
-    const deletedLocation = await Location.findByIdAndDelete(id).populate("user", "name avatar");
+    await Location.findByIdAndDelete(id).populate("user", "name avatar");
 
-    res.status(200).json(deletedLocation);
+    res.status(200).json("Delete location successfully");
   } catch (error) {
     next(error);
   }

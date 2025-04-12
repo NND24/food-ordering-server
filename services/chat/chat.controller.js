@@ -67,11 +67,12 @@ const deleteChat = asyncHandler(async (req, res, next) => {
 
     await Message.deleteMany({ chat: id });
 
-    const deletedChat = await Chat.findByIdAndDelete(id);
+    await Chat.findByIdAndDelete(id);
 
-    if (!deletedChat) next(createError(404, "Chat not found!"));
-
-    res.json(deletedChat);
+    res.json({
+      success: true,
+      data: "Delete successful!",
+    });
   } catch (error) {
     next(error);
   }
