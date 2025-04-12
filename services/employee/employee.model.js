@@ -52,6 +52,8 @@ var employeeSchema = new mongoose.Schema(
       enum: ["ADMIN", "USER", "EMPLOYEE", "STORE", "SHIPPER"],
       default: ["USER"],
     },
+    otp: String,
+    otpExpires: Date,
   },
   {
     timestamps: true,
