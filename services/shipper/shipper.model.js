@@ -38,18 +38,19 @@ var shipperSchema = new mongoose.Schema(
       url: {
         type: String,
         required: true,
-        default: "https://res.cloudinary.com/datnguyen240/image/upload/v1722168751/avatars/avatar_pnncdk.png",
+        default:
+          "https://res.cloudinary.com/datnguyen240/image/upload/v1722168751/avatars/avatar_pnncdk.png",
       },
       createdAt: { type: Date, default: Date.now },
     },
     status: {
       type: String,
-      enum: ['PENDING', 'APPROVED', 'BLOCKED'],
-      default: "PENDING"
+      enum: ["PENDING", "APPROVED", "BLOCKED"],
+      default: "PENDING",
     },
-    online:{
-      type: Boolean, 
-      enum: false,
+    vehicle: {
+      name: { type: String, required: true },
+      number: { type: String, required: true },
     },
     refreshToken: {
       type: String,

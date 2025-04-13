@@ -7,7 +7,7 @@ const getAllShippers = asyncHandler(async (req, res, next) => {
   try {
     const query = {};
     const getShippers = await Shipper.find(query).select(
-      "name email phonenumber gender avatar status"
+      "name email phonenumber gender avatar status vehicle"
     );
 
     res.json(getShippers);
@@ -20,7 +20,7 @@ const getShipper = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   try {
     const getShipper = await Shipper.findById(id).select(
-      "name email phonenumber gender avatar isGoogleLogin"
+      "name email phonenumber gender avatar vehicle "
     );
 
     if (getShipper) {
@@ -143,7 +143,7 @@ const resetPassword = asyncHandler(async (req, res, next) => {
 const getPendingShippers = asyncHandler(async (req, res, next) => {
   try {
     const pendingShippers = await Shipper.find({ status: "PENDING" }).select(
-      "name email phonenumber gender avatar"
+      "name email phonenumber gender avatar vehicle"
     );
 
     res.json(pendingShippers);
@@ -156,7 +156,7 @@ const getCurrentShippers = asyncHandler(async (req, res, next) => {
   try {
     const currentShipper = await Shipper.find({
       status: { $in: ["APPROVED", "BLOCKED"] },
-    }).select("name email phonenumber gender avatar status");
+    }).select("name email phonenumber gender avatar status vehicle");
 
     res.json(currentShipper);
   } catch (error) {
