@@ -45,7 +45,7 @@ const register = asyncHandler(async (req, res, next) => {
 });
 
 const registerShipper = asyncHandler(async (req, res, next) => {
-  const { name, email, phonenumber, gender, password, avatar } = req.body;
+  const { name, email, phonenumber, gender, password, avatar, vehicle } = req.body;
 
   // Kiểm tra email đã tồn tại chưa
   const findShipper = await Shipper.findOne({ email });
@@ -60,6 +60,7 @@ const registerShipper = asyncHandler(async (req, res, next) => {
     phonenumber,
     gender,
     password,
+    vehicle,
     avatar: avatar || { url: "" }, // Nếu không có ảnh thì để trống
   });
 
