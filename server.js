@@ -133,20 +133,31 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("sendLocation", (data) => {
-    console.log("Shipper location:", data);
-    io.emit("updateLocation", data);
+  // Handle send location
+  socket.on("joinOrder", (orderId) => {
+    socket.join(orderId);
+    console.log(`User joined order: ${orderId}`);
+  });
+
+  socket.on("leaveOrder", (orderId) => {
+    socket.leave(orderId);
+    console.log(`User left order: ${orderId}`);
+  });
+
+  socket.on("sendLocation", (locationData) => {
+    console.log("Shipper location:", locationData.data);
+    io.to(locationData.id).emit("updateLocation", locationData.data);
   });
 
   // Handle message
-  socket.on("joinChat", (room) => {
-    socket.join(room);
-    console.log(`User joined room: ${room}`);
+  socket.on("joinChat", (chatId) => {
+    socket.join(chatId);
+    console.log(`User joined room: ${chatId}`);
   });
 
-  socket.on("leaveChat", (room) => {
-    socket.leave(room);
-    console.log(`User left room: ${room}`);
+  socket.on("leaveChat", (chatId) => {
+    socket.leave(chatId);
+    console.log(`User left room: ${chatId}`);
   });
 
   socket.on("sendMessage", (newMessageReceived) => {
