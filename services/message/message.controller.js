@@ -1,5 +1,6 @@
 const Message = require("./message.model");
 const User = require("../user/user.model");
+const Shipper = require("../shipper/shipper.model");
 const Chat = require("../chat/chat.model");
 const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
@@ -40,16 +41,23 @@ const getAllMessages = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
   try {
-    const messages = await Message.find({ chat: id }).populate("sender", "name avatar");
-    const chat = await Chat.findById(id)
-      .populate("users", "name avatar")
-      .populate({
-        path: "latestMessage",
-        populate: {
-          path: "sender",
-          select: "name avatar",
-        },
-      });
+    let messages = await Message.find({ chat: id });
+    let chat = await Chat.findById(id).populate("latestMessage");
+
+    const populatedUsers = await Promise.all(
+      chat.users.map(async (userId) => {
+        let user = await User.findById(userId).select("name avatar").lean();
+        if (!user) {
+          user = await Shipper.findById(userId).select("name avatar").lean();
+        }
+        return user;
+      })
+    );
+
+    chat = {
+      ...chat.toObject(),
+      users: populatedUsers,
+    }
 
     if (!messages) next(createError(404, "Message not found!"));
 
