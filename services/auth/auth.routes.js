@@ -22,7 +22,7 @@ const {
   getRefreshTokenMobile,
   forgotPasswordEmployee,
   checkOTPForEmployee,
-  resetPasswordEmployee
+  resetPasswordEmployee,
 } = require("./auth.controller");
 
 const router = express.Router();
@@ -43,8 +43,8 @@ router.post("/forgot-password/employee", forgotPasswordEmployee);
 router.post("/check-otp/shipper", checkOTPForShipper);
 router.get("/logout", logout);
 router.post("/check-otp/employee", checkOTPForEmployee);
-router.post("/logout", logout);
 
+router.get("/logout", logout);
 router.get("/refresh", getRefreshToken);
 router.get("/refresh/mobile", getRefreshTokenMobile);
 
