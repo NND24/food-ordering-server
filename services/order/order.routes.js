@@ -14,6 +14,7 @@ const {
   getShipperOrders,
   getOrderStats,
   getMonthlyOrderStats,
+  cancelOrder,
 } = require("./order.controller");
 const router = express.Router();
 router.get("/monthly-stats", verifyToken, getMonthlyOrderStats);
@@ -22,19 +23,11 @@ router.get("/finished", authMiddleware, getFinishedOrders);
 router.get("/taken", authMiddleware, getOnGoingOrder);
 router.get("/delivered", authMiddleware, getDeliveredOrders);
 router.get("/stats", verifyToken, getOrderStats);
-router.get(
-  "/:orderId",
-  authMiddleware,
-  validateMongoDbId("orderId"),
-  getOrderDetail
-);
+router.get("/:orderId", authMiddleware, validateMongoDbId("orderId"), getOrderDetail);
 
-router.get(
-  "/shipper/:shipperId",
-  validateMongoDbId("shipperId"),
-  getShipperOrders
-);
+router.get("/shipper/:shipperId", validateMongoDbId("shipperId"), getShipperOrders);
 router.put("/:orderId/accept", authMiddleware, acceptOrder);
 router.put("/:orderId/update-status", authMiddleware, updateOrderStatus);
+router.put("/:orderId/cancel-order", authMiddleware, cancelOrder);
 
 module.exports = router;
