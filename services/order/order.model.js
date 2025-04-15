@@ -86,6 +86,14 @@ var orderSchema = new mongoose.Schema(
       type: String,
       enum: ["cash", "credit_card"],
     },
+    cancelledAt: {
+      type: Date,
+      default: null,
+      index: {
+        expireAfterSeconds: 1800, // 30 min
+        partialFilterExpression: { status: "cancelled" },
+      },
+    },
   },
   { timestamps: true }
 );

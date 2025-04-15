@@ -218,6 +218,33 @@ const updateOrderStatus = asyncHandler(async (req, res, next) => {
   });
 });
 
+const cancelOrder = asyncHandler(async (req, res, next) => {
+  const { orderId } = req.params;
+
+  const order = await Order.findById(orderId);
+  if (!order) {
+    return next(createError(404, "Order not found"));
+  }
+
+  const cancellableStatuses = ["preorder", "pending", "confirmed"];
+
+  if (cancellableStatuses.includes(order.status)) {
+    order.status = "cancelled";
+    order.cancelledAt = new Date();
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Order status updated successfully",
+    });
+  } else {
+    res.status(409).json({
+      success: false,
+      message: `Cannot cancel an order with status '${order.status}'. Only pending orders can be cancelled.`,
+    });
+  }
+});
+
 const getDeliveredOrders = asyncHandler(async (req, res, next) => {
   const shipperId = req?.user?._id;
 
@@ -375,4 +402,5 @@ module.exports = {
   getShipperOrders,
   getOrderStats,
   getMonthlyOrderStats,
+  cancelOrder,
 };
