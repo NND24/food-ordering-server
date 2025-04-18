@@ -25,7 +25,8 @@ const cartRoute = require("./services/cart/cart.routes");
 const favoriteRoute = require("./services/favorite/favorite.routes");
 const orderRoute = require("./services/order/order.routes");
 const ratingRoute = require("./routes/rating.route");
-
+const { Store } = require("./services/store/store.model");
+const { setSocketIo, getUserSockets } = require("./utils/socketManager");
 const app = express();
 connectDB();
 
@@ -68,7 +69,8 @@ PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 const io = socketIo(server, { cors: { origin: "*" } });
 
-const userSockets = {};
+setSocketIo(io); // Make io accessible everywhere
+const userSockets = getUserSockets();
 
 io.on("connection", (socket) => {
   // Nhận user ID từ client khi kết nối
@@ -80,6 +82,18 @@ io.on("connection", (socket) => {
     try {
       const allNotifications = await Notification.find({ userId }).sort({ createdAt: -1 });
       socket.emit("getAllNotifications", allNotifications); // Gửi về client
+      // // Gửi thông báo cho store
+      // const storeBelongs = await Store.findOne({
+      //   $or: [
+      //     { owner: userId },
+      //     { staff: userId }
+      //   ]
+      // });
+      // if (storeBelongs) {
+      //   const storeNotifications = await Notification.find({ userId: storeBelongs.owner }).sort({ createdAt: -1 });
+      //   console.log("Store notifications:", storeNotifications);
+      //   socket.emit("getStoreNotifications", storeNotifications); // Gửi về client
+      // }
     } catch (error) {
       console.error("Lỗi lấy thông báo:", error);
     }
@@ -98,6 +112,19 @@ io.on("connection", (socket) => {
       console.error("Lỗi gửi thông báo:", error);
     }
   });
+
+  // socket.on("triggerNewOrder", async ({ storeId }) => {
+  //     const store = await Store.findById(storeId);
+  //     const userIds = [store.owner.toString(), ...(store.staff || []).map(s => s.toString())];
+  //       // Emit real-time notification to each user if online
+  //     userIds.forEach(uid => {
+  //       const socketId = userSockets[uid];
+  //       if (socketId) {
+  //         io.to(socketId).emit("newOrderNotification", newNotification);
+  //         console.log("Notification sent to user:", uid);
+  //       }
+  //     });
+  // });
 
   socket.on("sendLocation", (data) => {
     console.log("Shipper location:", data);

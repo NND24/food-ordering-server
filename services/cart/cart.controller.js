@@ -3,8 +3,11 @@ const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 const { query } = require("express");
 const mongoose = require("mongoose");
+const Notification = require("../notification/notification.model");
 const { Dish, ToppingGroup, Rating } = require("../store/store.model");
 const Order = require("../order/order.model");
+const { Store } = require("../store/store.model");
+const { getSocketIo, getUserSockets } = require("../../utils/socketManager");
 
 // [GET] /#
 const getUserCart = async (req, res) => {
@@ -532,23 +535,27 @@ const completeCart = async (req, res) => {
       note,
       location = [],
     } = req.body;
+
     if (!userId) {
       return res.status(401).json({ success: false, message: "User not found" });
     }
+
     if (!storeId || !paymentMethod || !deliveryAddress || !location) {
       return res.status(400).json({ success: false, message: "Invalid request body" });
     }
+
     const cart = await Cart.findOne({ user: userId, store: storeId });
     if (!cart || !cart.items.length) {
       return res.status(400).json({ success: false, message: "Cart is empty" });
     }
+
     const newOrder = new Order({
       user: userId,
       customerName,
       customerPhonenumber,
       note,
       store: storeId,
-      items: cart.items, // Copy cart items to order
+      items: cart.items,
       totalPrice: cart.totalPrice,
       shipLocation: {
         type: "Point",
@@ -556,24 +563,59 @@ const completeCart = async (req, res) => {
         address: deliveryAddress,
         detailAddress,
       },
-      status: "pending", // Default status for a new order
+      status: "pending",
       paymentMethod: paymentMethod,
       createdAt: new Date(),
     });
-    await newOrder.save(); // Save order to DB
 
+    await newOrder.save();
     await Cart.findOneAndDelete({ user: userId });
+
+    const store = await Store.findById(storeId);
+    const userIds = [store.owner.toString(), ...(store.staff || []).map(s => s.toString())];
+
+    // Create and save the notification
+    const newNotification = new Notification({
+      userId: store.owner, // This is just for record; real targets are owner and staff
+      title: "New Order has been placed",
+      message: "You have a new order!",
+      type: "order",
+      status: "unread",
+      createdAt: new Date(),
+    });
+
+    await newNotification.save();
+    const io = getSocketIo();
+    const userSockets = getUserSockets();
+    // console.log("userSockets", userSockets);
+    // console.log("io", io);
+
+    // Get socket.io instance and emit to each connected user
+    userIds.forEach(uid => {
+      const socketId = userSockets[uid];
+      if (socketId) {
+        io.to(socketId).emit("newOrderNotification", {
+          notification: newNotification,
+          orderId: newOrder._id,
+        });
+        console.log("✅ Notification sent to user:", uid);
+      } else {
+        console.log("⚠️ User not connected or no socket found for user:", uid);
+      }
+    });
 
     return res.status(201).json({
       success: true,
       message: "Order placed successfully",
       order: newOrder,
     });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 const reOrder = async (req, res) => {
   try {

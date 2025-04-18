@@ -1,4 +1,13 @@
-const { Store, Dish, ToppingGroup, Staff, Rating, Category, Topping } = require("./store.model");
+const {
+  Store,
+  Dish,
+  ToppingGroup,
+  Staff,
+  Rating,
+  Category,
+  Topping,
+} = require("./store.model");
+const { getSocketIo } = require("../../utils/socketManager");
 const Order = require("../order/order.model");
 const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
@@ -23,8 +32,8 @@ const getAllDish = async (req, res) => {
         {
           path: "toppingGroups",
           select: "name toppings",
-          populate: { path: "toppings", select: "name price" } // Correctly populates toppings inside toppingGroups
-        }
+          populate: { path: "toppings", select: "name price" }, // Correctly populates toppings inside toppingGroups
+        },
       ],
       limit,
       page
@@ -42,29 +51,49 @@ const getAllStore = async (req, res) => {
     let filterOptions = {};
     if (name) filterOptions.name = { $regex: name, $options: "i" };
     if (category) {
-      const categories = Array.isArray(category) ? category : category.split(",");
+      const categories = Array.isArray(category)
+        ? category
+        : category.split(",");
       filterOptions.storeCategory = { $in: categories };
     }
 
     // Fetch all stores first
-    let stores = await Store.find(filterOptions).populate("storeCategory").lean();
+    let stores = await Store.find(filterOptions)
+      .populate("storeCategory")
+      .lean();
 
     const storeRatings = await Rating.aggregate([
-      { $group: { _id: "$store", avgRating: { $avg: "$ratingValue" }, amountRating: { $sum: 1 } } },
+      {
+        $group: {
+          _id: "$store",
+          avgRating: { $avg: "$ratingValue" },
+          amountRating: { $sum: 1 },
+        },
+      },
     ]);
     stores = stores.map((store) => {
-      const rating = storeRatings.find((r) => r._id.toString() == store._id.toString());
-      return { ...store, avgRating: rating ? rating.avgRating : 0, amountRating: rating ? rating.amountRating : 0 };
+      const rating = storeRatings.find(
+        (r) => r._id.toString() == store._id.toString()
+      );
+      return {
+        ...store,
+        avgRating: rating ? rating.avgRating : 0,
+        amountRating: rating ? rating.amountRating : 0,
+      };
     });
 
     // Apply sorting manually
     if (sort === "rating") {
       stores = stores.sort((a, b) => b.avgRating - a.avgRating);
     } else if (sort === "standout") {
-      const storeOrders = await Order.aggregate([{ $group: { _id: "$store", orderCount: { $sum: 1 } } }]);
+      const storeOrders = await Order.aggregate([
+        { $group: { _id: "$store", orderCount: { $sum: 1 } } },
+      ]);
       stores = stores
         .map((store) => {
-          const order = storeOrders.find((o) => o._id.toString() == store._id.toString());
+          const order = storeOrders.find(
+            (o) => o._id.toString() == store._id.toString()
+          );
           return {
             ...store,
             orderCount: order ? order.orderCount : 0,
@@ -80,7 +109,10 @@ const getAllStore = async (req, res) => {
       const pageSize = parseInt(limit) || 10;
       const pageNumber = parseInt(page) || 1;
       const totalPages = Math.ceil(totalItems / pageSize);
-      const paginatedStores = stores.slice((pageNumber - 1) * pageSize, pageNumber * pageSize);
+      const paginatedStores = stores.slice(
+        (pageNumber - 1) * pageSize,
+        pageNumber * pageSize
+      );
 
       res.status(200).json({
         success: true,
@@ -120,12 +152,19 @@ const getStoreInformation = async (req, res) => {
     // Calculate average rating
     const storeRatings = await Rating.aggregate([
       { $match: { store: store._id } }, // Only consider ratings for this store
-      { $group: { _id: "$store", avgRating: { $avg: "$ratingValue" }, amountRating: { $sum: 1 } } },
+      {
+        $group: {
+          _id: "$store",
+          avgRating: { $avg: "$ratingValue" },
+          amountRating: { $sum: 1 },
+        },
+      },
     ]);
 
     // Find rating data for the store
     const avgRating = storeRatings.length > 0 ? storeRatings[0].avgRating : 0;
-    const amountRating = storeRatings.length > 0 ? storeRatings[0].amountRating : 0;
+    const amountRating =
+      storeRatings.length > 0 ? storeRatings[0].amountRating : 0;
 
     res.status(200).json({
       success: true,
@@ -165,7 +204,7 @@ const getAllTopping = async (req, res) => {
           path: "toppings",
           select: "name price",
           // populate: { path: "toppings", select: "name price" } // Correctly populates toppings inside toppingGroups
-        }
+        },
       ],
       limit,
       page
@@ -183,7 +222,13 @@ const getAllCategory = async (req, res) => {
     if (name) {
       filterOptions.name = { $regex: name, $options: "i" };
     }
-    const response = await getPaginatedData(Category, filterOptions, null, limit, page);
+    const response = await getPaginatedData(
+      Category,
+      filterOptions,
+      null,
+      limit,
+      page
+    );
     res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -193,11 +238,10 @@ const getAllCategory = async (req, res) => {
 const getAllStaff = asyncHandler(async (req, res, next) => {
   const { store_id } = req.params;
 
-  const store = await Store.findById(store_id)
-    .populate({
-      path: "staff",
-      select: "-password", // Exclude password from populated staff
-    });
+  const store = await Store.findById(store_id).populate({
+    path: "staff",
+    select: "-password", // Exclude password from populated staff
+  });
   if (!store) {
     return next(createError(404, "Cửa hàng không tồn tại"));
   }
@@ -217,7 +261,9 @@ const getAllOrder = async (req, res) => {
     const { store_id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(store_id)) {
-      return res.status(400).json({ success: false, message: "Invalid store_id format" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid store_id format" });
     }
 
     let filterOptions = { store: store_id };
@@ -244,7 +290,7 @@ const getAllOrder = async (req, res) => {
         { path: "user", select: "name email avatar" },
         { path: "items.dish", select: "name price image description" },
         { path: "items.toppings", select: "name price" },
-        { path: "shipper", select: "name email avatar" }
+        { path: "shipper", select: "name email avatar" },
       ],
       limit,
       page
@@ -253,11 +299,12 @@ const getAllOrder = async (req, res) => {
     // Filter again in memory to support search on user.name
     if (name && name.trim() !== "") {
       const regex = new RegExp(name, "i");
-      response.data = response.data.filter(order =>
-        order.user?.name?.match(regex) ||
-        order.customerName?.match(regex) ||
-        order.customerPhonenumber?.match(regex)
-      )
+      response.data = response.data.filter(
+        (order) =>
+          order.user?.name?.match(regex) ||
+          order.customerName?.match(regex) ||
+          order.customerPhonenumber?.match(regex)
+      );
     }
 
     res.status(200).json(response);
@@ -266,9 +313,6 @@ const getAllOrder = async (req, res) => {
   }
 };
 
-
-
-
 // [GET] /order/[order_id]
 const getOrder = async (req, res) => {
   try {
@@ -276,10 +320,10 @@ const getOrder = async (req, res) => {
 
     // Truy vấn danh sách món ăn
     const order = await Order.findById(order_id).populate([
-      { path: "store", select: "name" },  // Include store details
+      { path: "store", select: "name" }, // Include store details
       { path: "user", select: "name email avatar" }, // Include user details
       { path: "items.dish", select: "name price" }, // Include dish details
-      { path: "items.toppings", select: "name price" } // Include toppings details
+      { path: "items.toppings", select: "name price" }, // Include toppings details
     ]);
 
     if (!order) {
@@ -311,7 +355,14 @@ const getDish = async (req, res) => {
     const { dish_id } = req.params;
 
     // Truy vấn danh sách món ăn
-    const dish = await Dish.findById(dish_id);
+    const dish = await Dish.findById(dish_id).populate([
+      { path: "category", select: "name" },
+      {
+        path: "toppingGroups",
+        select: "name toppings",
+        populate: { path: "toppings", select: "name price" }, // Correctly populates toppings inside toppingGroups
+      },
+    ]);
 
     if (!dish) {
       return res.status(404).json({
@@ -341,7 +392,10 @@ const getTopping = async (req, res) => {
     const { group_id } = req.params;
 
     // Truy vấn danh sách món ăn
-    const toppingGroup = await ToppingGroup.findById(group_id).populate("toppings");
+    const toppingGroup = await ToppingGroup.findById(group_id).populate({
+      path: "toppings",
+      select: "-toppingGroup",
+    });
 
     if (!toppingGroup) {
       return res.status(404).json({
@@ -457,7 +511,6 @@ const createStaff = asyncHandler(async (req, res, next) => {
   });
 });
 
-
 const updateStaff = asyncHandler(async (req, res, next) => {
   const { store_id } = req.params;
   const { staff_id, name, email, phonenumber, gender, role } = req.body;
@@ -484,16 +537,16 @@ const updateStaff = asyncHandler(async (req, res, next) => {
   if (phonenumber) staff.phonenumber = phonenumber;
   if (gender) staff.gender = gender;
   if (role) {
-    console.log(role) 
+    console.log(role);
     const updatedRole = [role, "user"];
     staff.role = updatedRole;
   }
   await staff.save();
 
-  res.status(200).json({ message: "Thông tin nhân viên đã được cập nhật", staff });
+  res
+    .status(200)
+    .json({ message: "Thông tin nhân viên đã được cập nhật", staff });
 });
-
-
 
 const getAvgRating = async (req, res) => {
   try {
@@ -533,7 +586,9 @@ const getAllRating = async (req, res) => {
     const page = parseInt(no);
 
     if (page < 1) {
-      return res.status(400).json({ success: false, message: "Invalid page number" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid page number" });
     }
 
     // Tạo bộ lọc tìm kiếm
@@ -581,7 +636,13 @@ const getAllStoreRating = async (req, res) => {
     const { limit, page, sort } = req.query;
 
     let filterOptions = { store: storeId };
-    const result = await getPaginatedData(Rating, filterOptions, "user dishes", parseInt(limit), parseInt(page));
+    const result = await getPaginatedData(
+      Rating,
+      filterOptions,
+      "user dishes",
+      parseInt(limit),
+      parseInt(page)
+    );
 
     if (sort === "desc") {
       result.data = result.data.sort((a, b) => b.ratingValue - a.ratingValue);
@@ -630,13 +691,12 @@ const getToppingFromDish = async (req, res) => {
     const { dish_id } = req.params;
 
     // Fetch the dish with its topping groups and toppings
-    const dish = await Dish.findById(dish_id)
-      .populate({
-        path: "toppingGroups",
-        populate: {
-          path: "toppings",
-        },
-      });
+    const dish = await Dish.findById(dish_id).populate({
+      path: "toppingGroups",
+      populate: {
+        path: "toppings",
+      },
+    });
 
     if (!dish) {
       return res.status(404).json({
@@ -653,14 +713,14 @@ const getToppingFromDish = async (req, res) => {
     }
 
     // Sanitize: remove toppingGroup field from each topping
-    const cleanedToppingGroups = dish.toppingGroups.map(group => {
-      const cleanedToppings = group.toppings.map(topping => {
+    const cleanedToppingGroups = dish.toppingGroups.map((group) => {
+      const cleanedToppings = group.toppings.map((topping) => {
         const { toppingGroup, ...rest } = topping.toObject(); // Remove toppingGroup
         return rest;
       });
       return {
         ...group.toObject(),
-        toppings: cleanedToppings
+        toppings: cleanedToppings,
       };
     });
 
@@ -669,7 +729,6 @@ const getToppingFromDish = async (req, res) => {
       message: "Toppings retrieved successfully",
       data: cleanedToppingGroups,
     });
-
   } catch (error) {
     if (error.name === "CastError") {
       return res.status(400).json({
@@ -680,7 +739,6 @@ const getToppingFromDish = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-
 
 const createToppingGroup = async (req, res) => {
   try {
@@ -773,6 +831,57 @@ const addToppingToGroup = async (req, res) => {
   }
 };
 
+const addToppingGroup = async (req, res) => {
+  try {
+    const toppingGroup  = req.body;
+    const { store_id } = req.params;
+    console.log("Store ID:", store_id);
+    console.log("Topping Group:", toppingGroup);
+
+    if (!toppingGroup.name || toppingGroup.name.trim() === "") {
+      return res.status(400).json({ message: "Tên nhóm topping là bắt buộc." });
+    }
+
+    // Check if the topping group already exists
+    const existingGroup = await ToppingGroup.findOne({ name: toppingGroup.name.trim() });
+    if (existingGroup) {
+      return res.status(409).json({ message: "Nhóm topping đã tồn tại." });
+    }
+
+    // Create new topping group
+    const newGroup = new ToppingGroup({
+      name: toppingGroup.name.trim(),
+      store: store_id,
+      toppings: [],
+    });
+
+    const savedGroup = await newGroup.save();
+    return res.status(201).json(savedGroup);
+  } catch (error) {
+    console.error("Add Topping Group Error:", error);
+    return res
+      .status(500)
+      .json({ message: "Lỗi server khi thêm nhóm topping." });
+  }
+};
+
+const deleteToppingGroup = async (req, res) => {
+  try {
+    const { group_id } = req.params;
+
+    const deletedGroup = await ToppingGroup.findByIdAndDelete(group_id);
+
+    if (!deletedGroup) {
+      return res.status(404).json({ message: "Không tìm thấy nhóm topping." });
+    }
+
+    return res.status(200).json({ message: "Xóa nhóm topping thành công." });
+  } catch (error) {
+    console.error("Delete Topping Group Error:", error);
+    return res.status(500).json({ message: "Lỗi server khi xóa nhóm topping." });
+  }
+};
+
 
 const removeToppingFromGroup = async (req, res) => {
   try {
@@ -789,7 +898,9 @@ const removeToppingFromGroup = async (req, res) => {
 
     // Find and remove the topping
     const initialLength = toppingGroup.toppings.length;
-    toppingGroup.toppings = toppingGroup.toppings.filter((topping) => topping._id.toString() !== topping_id);
+    toppingGroup.toppings = toppingGroup.toppings.filter(
+      (topping) => topping._id.toString() !== topping_id
+    );
 
     if (toppingGroup.toppings.length === initialLength) {
       return res.status(404).json({
@@ -811,27 +922,6 @@ const removeToppingFromGroup = async (req, res) => {
   }
 };
 
-const deleteToppingGroup = async (req, res) => {
-  try {
-    const { group_id } = req.params;
-
-    // Find and delete the topping group
-    const toppingGroup = await ToppingGroup.findByIdAndDelete(group_id);
-    if (!toppingGroup) {
-      return res.status(404).json({
-        success: false,
-        message: "Topping group not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Topping group deleted successfully",
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
 
 const addToppingToDish = async (req, res) => {
   try {
@@ -869,7 +959,9 @@ const addToppingToDish = async (req, res) => {
     // Extract valid toppings from the groups
     let validToppings = [];
     toppingGroups.forEach((group) => {
-      let filteredToppings = group.toppings.filter((topping) => topping_ids.includes(topping._id.toString()));
+      let filteredToppings = group.toppings.filter((topping) =>
+        topping_ids.includes(topping._id.toString())
+      );
       validToppings.push(...filteredToppings);
     });
 
@@ -887,7 +979,11 @@ const addToppingToDish = async (req, res) => {
 
     // Filter out toppings that are already added to the dish
     let newToppings = validToppings.filter(
-      (topping) => !dish.toppings.some((existingTopping) => existingTopping._id.toString() === topping._id.toString())
+      (topping) =>
+        !dish.toppings.some(
+          (existingTopping) =>
+            existingTopping._id.toString() === topping._id.toString()
+        )
     );
 
     if (newToppings.length === 0) {
@@ -945,14 +1041,20 @@ const updateOrder = async (req, res) => {
   }
 };
 
-
 const updateDish = async (req, res) => {
   try {
     const { dish_id } = req.params; // Get order ID from the request parameters
     const updatedData = req.body; // Get the updated data from the request body
 
     // Ensure the order exists
-    const dish = await Dish.findById(dish_id);
+    const dish = await Dish.findById(dish_id).populate([
+      { path: "category", select: "name" },
+      {
+        path: "toppingGroups",
+        select: "name toppings",
+        populate: { path: "toppings", select: "name price" }, // Correctly populates toppings inside toppingGroups
+      },
+    ]);
     if (!dish) {
       return res.status(404).json({ message: "Dish not found" });
     }
@@ -969,22 +1071,35 @@ const updateDish = async (req, res) => {
     console.error("Error updating dish:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
-}
+};
 
 const createDish = async (req, res) => {
   try {
     const { store_id } = req.params; // Get store ID from request parameters
     const dishData = req.body; // Get dish details from request body
-
     // Ensure required fields exist
     if (!dishData.name || !dishData.price) {
-      return res.status(400).json({ message: "Dish name and price are required" });
+      return res
+        .status(400)
+        .json({ message: "Dish name and price are required" });
     }
 
+    Object.keys(dishData).forEach((key) => {
+      if (dishData[key] === "") {
+        delete dishData[key];
+      }
+    });
     // Check if the dish with the same name already exists in the same store
-    const existingDish = await Dish.findOne({ name: dishData.name, store: store_id });
+    const existingDish = await Dish.findOne({
+      name: dishData.name,
+      store: store_id,
+    });
     if (existingDish) {
-      return res.status(400).json({ message: "A dish with this name already exists in the store." });
+      return res
+        .status(400)
+        .json({
+          message: "A dish with this name already exists in the store.",
+        });
     }
 
     // Create new dish
@@ -1002,6 +1117,34 @@ const createDish = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating dish:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const deleteDish = async (req, res) => {
+  try {
+    const { dish_id } = req.params;
+
+    // Validate input
+    if (!dish_id) {
+      return res.status(400).json({ message: "Dish ID is required" });
+    }
+
+    // Check if the dish exists
+    const dish = await Dish.findById(dish_id);
+    if (!dish) {
+      return res.status(404).json({ message: "Dish not found" });
+    }
+
+    // Delete the dish
+    await Dish.findByIdAndDelete(dish_id);
+
+    return res.status(200).json({
+      message: "Dish deleted successfully",
+      data: dish,
+    });
+  } catch (error) {
+    console.error("Error deleting dish:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -1031,7 +1174,9 @@ const createCategory = async (req, res) => {
     // Save to database
     const savedCategory = await newCategory.save();
 
-    res.status(201).json({ message: "Category created", category: savedCategory });
+    res
+      .status(201)
+      .json({ message: "Category created", category: savedCategory });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -1058,7 +1203,9 @@ const updateCategory = async (req, res) => {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    res.status(200).json({ message: "Category updated", category: updatedCategory });
+    res
+      .status(200)
+      .json({ message: "Category updated", category: updatedCategory });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -1067,6 +1214,20 @@ const updateCategory = async (req, res) => {
 const deleteCategory = async (req, res) => {
   try {
     const { category_id } = req.params;
+
+    // Check if the category is used in any dish
+    const dishesUsingCategory = await Dish.countDocuments({
+      category: category_id,
+    });
+
+    if (dishesUsingCategory > 0) {
+      return res
+        .status(400)
+        .json({
+          message: "Cannot delete category, it is used in one or more dishes",
+          data: dishesUsingCategory,
+        });
+    }
 
     // Find and delete category
     const deletedCategory = await Category.findByIdAndDelete(category_id);
@@ -1088,7 +1249,9 @@ const updateTopping = async (req, res) => {
 
     // Validate input
     if (!name || price == null) {
-      return res.status(400).json({ success: false, message: "Name and price are required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Name and price are required" });
     }
 
     // Find and update the topping
@@ -1099,7 +1262,9 @@ const updateTopping = async (req, res) => {
     );
 
     if (!updatedTopping) {
-      return res.status(404).json({ success: false, message: "Topping not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Topping not found" });
     }
 
     res.status(200).json({ success: true, data: updatedTopping });
@@ -1109,15 +1274,15 @@ const updateTopping = async (req, res) => {
   }
 };
 
-
-
 const updateStore = async (req, res) => {
   try {
     const { store_id } = req.params;
     const updates = req.body;
-    
+
     if (!store_id || !updates) {
-      return res.status(400).json({ message: "Store ID and updates are required." });
+      return res
+        .status(400)
+        .json({ message: "Store ID and updates are required." });
     }
 
     // Ensure only allowed fields are updated
@@ -1130,9 +1295,9 @@ const updateStore = async (req, res) => {
       "cover",
       "paperWork.storePicture",
     ];
-    
+
     const filteredUpdates = {};
-    
+
     allowedUpdates.forEach((key) => {
       if (updates[key] !== undefined) {
         filteredUpdates[key] = updates[key];
@@ -1170,7 +1335,9 @@ const registerStore = asyncHandler(async (req, res) => {
   const userId = req.user._id; // Authenticated user ID
 
   if (!name || !address?.full_address) {
-    return res.status(400).json({ message: "Tên cửa hàng và địa chỉ là bắt buộc." });
+    return res
+      .status(400)
+      .json({ message: "Tên cửa hàng và địa chỉ là bắt buộc." });
   }
 
   // Check if store name already exists
@@ -1182,7 +1349,9 @@ const registerStore = asyncHandler(async (req, res) => {
   // Validate store categories
   let categoryIds = [];
   if (storeCategory && storeCategory.length > 0) {
-    const validCategories = await FoodType.find({ _id: { $in: storeCategory } });
+    const validCategories = await FoodType.find({
+      _id: { $in: storeCategory },
+    });
     if (validCategories.length !== storeCategory.length) {
       return res.status(400).json({ message: "Danh mục không hợp lệ!" });
     }
@@ -1204,17 +1373,18 @@ const registerStore = asyncHandler(async (req, res) => {
 
   // Assign "storeOwner" role to the user
   const user = await User.findById(userId);
-  if (!user) return res.status(404).json({ message: "Người dùng không tồn tại" });
+  if (!user)
+    return res.status(404).json({ message: "Người dùng không tồn tại" });
 
   if (!user.role.includes("storeOwner")) {
     user.role.push("storeOwner");
     await user.save();
   }
 
-  res.status(201).json({ message: "Cửa hàng đã được đăng ký thành công!", store });
+  res
+    .status(201)
+    .json({ message: "Cửa hàng đã được đăng ký thành công!", store });
 });
-
-
 
 module.exports = {
   getAllDish,
@@ -1250,4 +1420,6 @@ module.exports = {
   updateStaff,
   updateStore,
   registerStore,
+  deleteDish,
+  addToppingGroup,
 };

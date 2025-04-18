@@ -5,17 +5,33 @@ const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 
 const sendMessage = asyncHandler(async (req, res, next) => {
-  const { id } = req.params;
+  const { id } = req.params; // Chat ID
 
-  var newMessage = {
-    sender: req.user._id,
+  const chat = await Chat.findById(id).populate("store users");
+
+  if (!chat) return next(createError(404, "Chat not found"));
+
+  // Check if user is allowed to send in this chat
+  const isStaff = ["owner", "manager", "staff"].includes(req.user.role);
+  const isClientChat = chat.users.some(
+    (u) => u._id.toString() === req.user._id.toString()
+  );
+
+  const isStoreChat = chat.store && isStaff;
+
+  if (!isClientChat && !isStoreChat) {
+    return next(createError(403, "Not authorized to send messages in this chat"));
+  }
+
+  const newMessage = {
+    sender: req.user._id, // always a User
     content: req.body?.content,
     image: req.body?.image,
     chat: id,
   };
 
   try {
-    var message = await Message.create(newMessage);
+    let message = await Message.create(newMessage);
     message = await message.populate("sender", "name avatar");
     message = await message.populate("chat");
     message = await User.populate(message, {
@@ -32,6 +48,7 @@ const sendMessage = asyncHandler(async (req, res, next) => {
     next(error);
   }
 });
+
 
 const getAllMessages = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
