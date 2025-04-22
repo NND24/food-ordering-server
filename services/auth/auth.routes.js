@@ -28,7 +28,6 @@ router.post("/login/google/mobile", loginWithGoogleMobile);
 router.post("/forgot-password", forgotPassword);
 router.post("/check-otp", checkOTP);
 router.post("/logout", logout);
-
 router.get("/refresh", getRefreshToken);
 
 router.put("/change-password", authMiddleware, changePassword);

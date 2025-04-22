@@ -484,7 +484,7 @@ const updateStaff = asyncHandler(async (req, res, next) => {
   if (phonenumber) staff.phonenumber = phonenumber;
   if (gender) staff.gender = gender;
   if (role) {
-    console.log(role) 
+    console.log(role)
     const updatedRole = [role, "user"];
     staff.role = updatedRole;
   }
@@ -1115,7 +1115,7 @@ const updateStore = async (req, res) => {
   try {
     const { store_id } = req.params;
     const updates = req.body;
-    
+
     if (!store_id || !updates) {
       return res.status(400).json({ message: "Store ID and updates are required." });
     }
@@ -1130,9 +1130,9 @@ const updateStore = async (req, res) => {
       "cover",
       "paperWork.storePicture",
     ];
-    
+
     const filteredUpdates = {};
-    
+
     allowedUpdates.forEach((key) => {
       if (updates[key] !== undefined) {
         filteredUpdates[key] = updates[key];
@@ -1160,59 +1160,76 @@ const registerStore = asyncHandler(async (req, res) => {
     name,
     description,
     address,
-    storeCategory,
-    avatar,
-    cover,
-    paperWork,
-    staff,
+    foodType,
+    latitude,
+    longitude,
+    email,
+    password,
   } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email và mật khẩu là bắt buộc." });
+  }
+  let user = await User.findOne({ email: email.trim().toLowerCase() });
+  if (user && user.role.includes("owner", "staff", "manager")) {
+    return res.status(400).json({ message: "Người dùng đã là chủ hoặc nhân viên cửa hàng. Hãy chọn email đăng ký khác" });
+  }
+  if (!user) {
+    user = await User.create({
+      name: email.split('@')[0],
+      email: email.trim().toLowerCase(),
+      password,
+    });
+  }
+  const userId = user._id;
+  // Check if user already owns a store
+  const ownStore = await Store.findOne({ owner: userId });
+  if (ownStore) {
+    return res.status(400).json({ message: "Người đăng ký đã sở hữu cửa hàng." });
+  }
 
-  const userId = req.user._id; // Authenticated user ID
-
-  if (!name || !address?.full_address) {
+  if (!name?.trim() || !address.trim()) {
     return res.status(400).json({ message: "Tên cửa hàng và địa chỉ là bắt buộc." });
   }
 
   // Check if store name already exists
-  const existingStore = await Store.findOne({ name });
+  const existingStore = await Store.findOne({ name: name.trim() });
   if (existingStore) {
     return res.status(400).json({ message: "Tên cửa hàng đã tồn tại!" });
   }
 
-  // Validate store categories
+  // Validate categories
   let categoryIds = [];
-  if (storeCategory && storeCategory.length > 0) {
-    const validCategories = await FoodType.find({ _id: { $in: storeCategory } });
-    if (validCategories.length !== storeCategory.length) {
+  if (foodType && foodType.length > 0) {
+    const validCategories = await FoodType.find({ _id: { $in: foodType } });
+    if (validCategories.length !== foodType.length) {
       return res.status(400).json({ message: "Danh mục không hợp lệ!" });
     }
     categoryIds = validCategories.map((c) => c._id);
   }
 
-  // Create store
-  const store = await Store.create({
-    name,
-    owner: userId,
-    description,
-    address,
-    storeCategory: categoryIds,
-    avatar,
-    cover,
-    paperWork,
-    staff: staff || [],
-  });
-
-  // Assign "storeOwner" role to the user
-  const user = await User.findById(userId);
-  if (!user) return res.status(404).json({ message: "Người dùng không tồn tại" });
-
-  if (!user.role.includes("storeOwner")) {
-    user.role.push("storeOwner");
-    await user.save();
+  const insert_address = {
+    full_address: address,
+    lat: latitude,
+    lon: longitude,
   }
 
-  res.status(201).json({ message: "Cửa hàng đã được đăng ký thành công!", store });
+  // Create the store
+  // const store = await Store.create({
+  //   name: name.trim(),
+  //   owner: userId,
+  //   description: description?.trim(),
+  //   address: insert_address,
+  //   storeCategory: categoryIds,
+  // });
+
+  // Update user role
+  // if (!user.role.includes("owner")) {
+  //   user.role.push("owner");
+  //   await user.save();
+  // }
+  return res.status(201).json({ message: "Cửa hàng đã được đăng ký thành công!", store });
 });
+
 
 
 

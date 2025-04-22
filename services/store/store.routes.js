@@ -50,7 +50,7 @@ const router = express.Router();
 // Store routes
 router.get("/", getAllStore);
 router.get("/:store_id", getStoreInformation); // CHECK
-router.post("/add", registerStore );
+router.post("/register-store", registerStore );
 router.put("/:store_id", updateStore);
 
 // Dish routes
