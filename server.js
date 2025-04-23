@@ -25,7 +25,7 @@ const cartRoute = require("./services/cart/cart.routes");
 const favoriteRoute = require("./services/favorite/favorite.routes");
 const orderRoute = require("./services/order/order.routes");
 const ratingRoute = require("./routes/rating.route");
-const { Store } = require("./services/store/store.model");
+const Chat  = require("./services/chat/chat.model");
 const { setSocketIo, getUserSockets } = require("./utils/socketManager");
 const app = express();
 connectDB();
@@ -82,18 +82,6 @@ io.on("connection", (socket) => {
     try {
       const allNotifications = await Notification.find({ userId }).sort({ createdAt: -1 });
       socket.emit("getAllNotifications", allNotifications); // Gửi về client
-      // // Gửi thông báo cho store
-      // const storeBelongs = await Store.findOne({
-      //   $or: [
-      //     { owner: userId },
-      //     { staff: userId }
-      //   ]
-      // });
-      // if (storeBelongs) {
-      //   const storeNotifications = await Notification.find({ userId: storeBelongs.owner }).sort({ createdAt: -1 });
-      //   console.log("Store notifications:", storeNotifications);
-      //   socket.emit("getStoreNotifications", storeNotifications); // Gửi về client
-      // }
     } catch (error) {
       console.error("Lỗi lấy thông báo:", error);
     }
@@ -113,19 +101,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  // socket.on("triggerNewOrder", async ({ storeId }) => {
-  //     const store = await Store.findById(storeId);
-  //     const userIds = [store.owner.toString(), ...(store.staff || []).map(s => s.toString())];
-  //       // Emit real-time notification to each user if online
-  //     userIds.forEach(uid => {
-  //       const socketId = userSockets[uid];
-  //       if (socketId) {
-  //         io.to(socketId).emit("newOrderNotification", newNotification);
-  //         console.log("Notification sent to user:", uid);
-  //       }
-  //     });
-  // });
-
   socket.on("sendLocation", (data) => {
     console.log("Shipper location:", data);
     io.emit("updateLocation", data);
@@ -142,8 +117,42 @@ io.on("connection", (socket) => {
     console.log(`User left room: ${room}`);
   });
 
-  socket.on("sendMessage", (newMessageReceived) => {
-    io.to(newMessageReceived.id).emit("messageReceived", newMessageReceived);
+  // socket.on("sendMessage", (newMessageReceived) => {
+  //   io.to(newMessageReceived.id).emit("messageReceived", newMessageReceived);
+  //   io.to(`store:${message.storeId}`).emit("storeNewMessage", message);
+  // });
+
+  socket.on("sendMessage", async (newMessageReceived) => {
+    console.log("New message received:", newMessageReceived);
+    
+    const chatId = newMessageReceived.id;
+  
+    try {
+      const chat = await Chat.findById(chatId)
+      if (!chat) {
+        console.error("Chat not found for ID:", chatId);
+        return;
+      }
+      console.log("Chat found:", chat);
+  
+      const storeId = chat.store.toString();
+  
+      // Emit message to user(s) in that chat room
+      io.to(chatId).emit("messageReceived", newMessageReceived);
+  
+      // Emit notification to the store room
+      if (storeId) {
+        console.log("Store ID found:", storeId);
+        io.to(`store:${storeId}`).emit("storeNewMessage", newMessageReceived);
+      }
+    } catch (error) {
+      console.error("Error in sendMessage:", error);
+    }
+  });
+
+  socket.on("joinStoreRoom", (storeId) => {
+    socket.join(`store:${storeId}`);
+    console.log(`Store ${storeId} joined room store:${storeId}`);
   });
 
   socket.on("deleteMessage", (id) => {

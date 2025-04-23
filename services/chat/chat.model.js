@@ -8,6 +8,11 @@ const chatSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    store: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Store",
+      required: false,
+    },
     latestMessage: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Message",

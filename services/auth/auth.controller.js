@@ -85,7 +85,7 @@ const login = asyncHandler(async (req, res, next) => {
     // Check if the user is associated with a store
     const store = await Store.findOne({
       $or: [{ owner: findUser._id }, { staff: findUser._id }],
-    }).select("_id name");
+    }).select("_id name owner");
 
     res.cookie("refreshToken", refreshToken, {
       maxAge: 30 * 24 * 60 * 60 * 1000,
@@ -95,7 +95,7 @@ const login = asyncHandler(async (req, res, next) => {
       _id: findUser._id,
       token: generateAccessToken(findUser._id),
       ...(getRole === "true" && { role: findUser.role }), // Include role if getRole is true
-      ...(getStore === "true" && store && { storeId: store._id}), // Include storeId & name if requested
+      ...(getStore === "true" && store && { storeId: store._id, ownerId: store.owner}), // Include storeId & name if requested
     });
   } else {
     return next(createError(401, "Email hoặc mật khẩu không hợp lệ!"));
