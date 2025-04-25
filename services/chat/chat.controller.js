@@ -1,4 +1,5 @@
 const User = require("../user/user.model");
+const Shipper = require("../shipper/shipper.model");
 const Chat = require("./chat.model");
 const Message = require("../message/message.model");
 const {Store} = require("../store/store.model");
@@ -16,16 +17,23 @@ const createChat = asyncHandler(async (req, res, next) => {
     // Tìm cuộc trò chuyện giữa 2 user
     let isChat = await Chat.findOne({
       users: { $all: [req.user._id, id] },
-    })
-      .populate("users", "name avatar")
-      .populate("latestMessage");
+    }).populate("latestMessage");
 
     if (isChat) {
-      isChat = await User.populate(isChat, {
-        path: "latestMessage.sender",
-        select: "name avatar",
+      const populatedUsers = await Promise.all(
+        isChat.users.map(async (userId) => {
+          let user = await User.findById(userId).select("name avatar").lean();
+          if (!user) {
+            user = await Shipper.findById(userId).select("name avatar").lean();
+          }
+          return user;
+        })
+      );
+    
+      return res.json({
+        ...isChat.toObject(),
+        users: populatedUsers,
       });
-      return res.json(isChat);
     }
 
     // Nếu không có chat, tạo mới
@@ -35,9 +43,22 @@ const createChat = asyncHandler(async (req, res, next) => {
     };
 
     const createdChat = await Chat.create(chatData);
-    const fullChat = await Chat.findById(createdChat._id).populate("users", "name avatar");
+    const fullChat = await Chat.findById(createdChat._id).populate("latestMessage");
 
-    res.status(200).json(fullChat);
+const populatedUsers = await Promise.all(
+  fullChat.users.map(async (userId) => {
+    let user = await User.findById(userId).select("name avatar").lean();
+    if (!user) {
+      user = await Shipper.findById(userId).select("name avatar").lean();
+    }
+    return user;
+  })
+);
+
+res.status(200).json({
+  ...fullChat.toObject(),
+  users: populatedUsers,
+});
   } catch (error) {
     next(error);
   }
@@ -168,11 +189,12 @@ const deleteChat = asyncHandler(async (req, res, next) => {
 
     await Message.deleteMany({ chat: id });
 
-    const deletedChat = await Chat.findByIdAndDelete(id);
+    await Chat.findByIdAndDelete(id);
 
-    if (!deletedChat) next(createError(404, "Chat not found!"));
-
-    res.json(deletedChat);
+    res.json({
+      success: true,
+      data: "Delete successful!",
+    });
   } catch (error) {
     next(error);
   }

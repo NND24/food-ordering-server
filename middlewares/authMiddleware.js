@@ -23,10 +23,6 @@ const authMiddleware = async (req, res, next) => {
         }
 
         req.user = user;
-
-        // console.log("🚀 Authenticated User:", req.user);
-        // console.log("🚀 Is Shipper:", req.isShipper);
-
         if (!user) {
           return next(createError(401, "User or Shipper not found"));
         }
@@ -34,9 +30,7 @@ const authMiddleware = async (req, res, next) => {
         next();
       }
     } catch (error) {
-      next(
-        createError(401, "Not authorized token expired, Please login again!")
-      );
+      next(createError(401, "Not authorized token expired, Please login again!"));
     }
   } else {
     next(createError(401, "There is no token attached to header"));

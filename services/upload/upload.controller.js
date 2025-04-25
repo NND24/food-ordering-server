@@ -48,7 +48,7 @@ const uploadAvatarImage = asyncHandler(async (req, res, next) => {
 });
 
 const uploadAvatarShipperImage = asyncHandler(async (req, res, next) => {
-  const shipperId = req?.shipper?._id;
+  const shipperId = req.params.id;
 
   if (!req.file) {
     return next(createError(400, "No file uploaded"));

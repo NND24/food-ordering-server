@@ -19,6 +19,7 @@ const getUserOrder = asyncHandler(async (req, res, next) => {
     })
     .populate("items.dish")
     .populate("items.toppings")
+    .populate("shipper")
     .sort({ updatedAt: -1 });
 
   if (!orders || orders.length === 0) {
@@ -53,7 +54,8 @@ const getOrderDetail = asyncHandler(async (req, res, next) => {
       path: "store",
     })
     .populate("items.dish")
-    .populate("items.toppings");
+    .populate("items.toppings")
+    .populate("shipper");
 
   if (!orderDetail || orderDetail.length === 0) {
     next(
@@ -75,6 +77,7 @@ const getFinishedOrders = asyncHandler(async (req, res, next) => {
     .populate({ path: "store" })
     .populate("items.dish")
     .populate("items.toppings")
+    .populate({ path: "user" })
     .sort({ updatedAt: -1 });
 
   if (!finishedOrders || finishedOrders.length === 0) {
@@ -88,6 +91,7 @@ const getFinishedOrders = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
+    count: finishedOrders.length,
     data: finishedOrders,
   });
 });
@@ -214,13 +218,38 @@ const updateOrderStatus = asyncHandler(async (req, res, next) => {
   });
 });
 
+const cancelOrder = asyncHandler(async (req, res, next) => {
+  const { orderId } = req.params;
+
+  const order = await Order.findById(orderId);
+  if (!order) {
+    return next(createError(404, "Order not found"));
+  }
+
+  const cancellableStatuses = ["preorder", "pending", "confirmed"];
+
+  if (cancellableStatuses.includes(order.status)) {
+    order.status = "cancelled";
+    order.cancelledAt = new Date();
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Order status updated successfully",
+    });
+  } else {
+    res.status(409).json({
+      success: false,
+      message: `Cannot cancel an order with status '${order.status}'. Only pending orders can be cancelled.`,
+    });
+  }
+});
+
 const getDeliveredOrders = asyncHandler(async (req, res, next) => {
   const shipperId = req?.user?._id;
 
   if (!shipperId) {
-    return next(
-      createError(400, { success: false, message: "Shipper not found" })
-    );
+    return next(createError(400, { success: false, message: "Shipper not found" }));
   }
 
   try {
@@ -260,6 +289,108 @@ const getDeliveredOrders = asyncHandler(async (req, res, next) => {
   }
 });
 
+const getShipperOrders = asyncHandler(async (req, res, next) => {
+  try {
+    const { shipperId } = req.params;
+    if (!shipperId) {
+      return next(createError(400, "Shipper ID không hợp lệ"));
+    }
+
+    // Lấy tất cả đơn hàng của shipper này
+    const allOrders = await Order.find({
+      shipper: shipperId,
+      status: "finished",
+    });
+
+    // Lọc ra đơn hàng của tháng hiện tại
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+
+    const ordersThisMonth = allOrders.filter((order) => {
+      const orderDate = new Date(order.createdAt);
+      return orderDate.getMonth() + 1 === currentMonth && orderDate.getFullYear() === currentYear;
+    });
+
+    res.status(200).json({
+      success: true,
+      totalOrders: allOrders.length, // Tổng số đơn hàng shipper đã nhận
+      monthlyOrders: ordersThisMonth.length, // Số đơn hàng trong tháng này
+    });
+  } catch (error) {
+    next(createError(500, "Lỗi khi lấy dữ liệu đơn hàng của shipper"));
+  }
+});
+
+const getOrderStats = asyncHandler(async (req, res, next) => {
+  try {
+    const totalOrders = await Order.countDocuments();
+
+    // Lấy thời gian đầu và cuối của tháng hiện tại
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const endOfMonth = new Date(startOfMonth);
+    endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+
+    const ordersThisMonth = await Order.countDocuments({
+      createdAt: {
+        $gte: startOfMonth,
+        $lt: endOfMonth,
+      },
+    });
+
+    res.status(200).json({
+      code: 200,
+      message: "Lấy thống kê đơn hàng thành công",
+      data: {
+        totalOrders,
+        ordersThisMonth,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const getMonthlyOrderStats = asyncHandler(async (req, res, next) => {
+  try {
+    const stats = await Order.aggregate([
+      {
+        $group: {
+          _id: { $month: "$createdAt" },
+          total: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          month: "$_id",
+          total: 1,
+          _id: 0,
+        },
+      },
+      { $sort: { month: 1 } },
+    ]);
+
+    // Chuyển thành array đủ 12 tháng
+    const fullStats = Array.from({ length: 12 }, (_, i) => {
+      const stat = stats.find((s) => s.month === i + 1);
+      return {
+        name: `Tháng ${i + 1}`,
+        total: stat ? stat.total : 0,
+      };
+    });
+
+    res.status(200).json({
+      code: 200,
+      message: "Lấy thống kê đơn hàng theo tháng thành công",
+      data: fullStats,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = {
   getUserOrder,
   getOrderDetail,
@@ -268,4 +399,8 @@ module.exports = {
   getOnGoingOrder,
   updateOrderStatus,
   getDeliveredOrders,
+  getShipperOrders,
+  getOrderStats,
+  getMonthlyOrderStats,
+  cancelOrder,
 };

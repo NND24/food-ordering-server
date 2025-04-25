@@ -2,10 +2,11 @@ const Employee = require("./employee.model");
 const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 
-
 const getAllEmployees = asyncHandler(async (req, res, next) => {
   try {
-    const getEmployees = await Employee.find({}).select("name email phonenumber gender avatar role");
+    const getEmployees = await Employee.find({}).select(
+      "name email phonenumber gender avatar status role"
+    );
 
     res.json(getEmployees);
   } catch (error) {
@@ -14,7 +15,7 @@ const getAllEmployees = asyncHandler(async (req, res, next) => {
 });
 
 const addEmployee = asyncHandler(async (req, res, next) => {
-  const { name, email, phonenumber, gender, password, role } = req.body;
+  const { name, email, phonenumber, gender, password, role, avatar } = req.body;
   const findEmployee = await Employee.findOne({ email });
   if (!findEmployee) {
     await Employee.create({
@@ -23,7 +24,8 @@ const addEmployee = asyncHandler(async (req, res, next) => {
       phonenumber,
       gender,
       password: password || phonenumber,
-      role
+      role,
+      avatar: avatar || { url: "" },
     });
     res.status(201).json("Add employee successfully");
   } else {
@@ -34,10 +36,12 @@ const addEmployee = asyncHandler(async (req, res, next) => {
 const getEmployee = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   try {
-    const getEmployee = await Employee.findById(id).select("name email phonenumber gender avatar role");
+    const getEmployee = await Employee.findById(id).select(
+      "name email phonenumber gender avatar role"
+    );
 
-    if (getShipper) {
-      res.json(getShipper);
+    if (getEmployee) {
+      res.json(getEmployee);
     } else {
       next(createError(404, "Employee not found"));
     }
@@ -47,10 +51,17 @@ const getEmployee = asyncHandler(async (req, res, next) => {
 });
 
 const updateEmployee = asyncHandler(async (req, res, next) => {
-  const employeeId = req?.employee?._id;
+  const employeeId = req.params.id; // Lấy id từ URL
   try {
-    const updateEmployee = await Employee.findByIdAndUpdate(employeeId, req.body, { new: true });
-    res.json(updateEmployee);
+    const updatedEmployee = await Employee.findByIdAndUpdate(
+      employeeId,
+      req.body,
+      { new: true }
+    );
+    if (!updatedEmployee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+    res.json(updatedEmployee);
   } catch (error) {
     next(error);
   }
@@ -65,7 +76,10 @@ const deleteEmployee = asyncHandler(async (req, res, next) => {
       return res.status(404).json({ msg: "Employee not found!" });
     }
 
-    res.json({ msg: "Delete Employee successfully!", deletedEmployee: employee });
+    res.json({
+      msg: "Delete Employee successfully!",
+      deletedEmployee: employee,
+    });
   } catch (error) {
     next(error);
   }
@@ -77,7 +91,7 @@ const changeRoles = asyncHandler(async (req, res, next) => {
   try {
     const employee = await Employee.findById(id);
 
-    if(!employee) {
+    if (!employee) {
       return next(createError(404, "Employee not found"));
     }
     employee.role = roles;
@@ -87,14 +101,17 @@ const changeRoles = asyncHandler(async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-})
-
+});
 
 const blockEmployee = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
   try {
-    const employee = await Employee.findByIdAndUpdate(id, { status: "BLOCKED" }, { new: true });
+    const employee = await Employee.findByIdAndUpdate(
+      id,
+      { status: "BLOCKED" },
+      { new: true }
+    );
 
     if (!employee) {
       return next(createError(404, "Employee not found"));
@@ -106,5 +123,78 @@ const blockEmployee = asyncHandler(async (req, res, next) => {
   }
 });
 
-module.exports = { getAllEmployees, getEmployee, addEmployee, updateEmployee, 
-                  deleteEmployee, blockEmployee, changeRoles };
+const approveEmployee = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+
+  try {
+    const employee = await Employee.findByIdAndUpdate(
+      id,
+      { status: "APPROVED" },
+      { new: true }
+    );
+
+    if (!employee) {
+      return next(createError(404, "Employee not found"));
+    }
+
+    res.json({ message: "Employee account has been approved", employee });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const verifyOldPassword = asyncHandler(async (req, res) => {
+  const { oldPassword } = req.body;
+  const employeeId = req.user.id;
+
+  try {
+    const employee = await Employee.findById(employeeId);
+    if (!employee) {
+      return res
+        .status(404)
+        .json({ message: "Employee not existed! " + employeeId });
+    }
+
+    const isMatch = await employee.isPasswordMatched(oldPassword);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Old password is not correct!" });
+    }
+
+    res.status(200).json({ message: "Correct password!" });
+  } catch (error) {
+    res.status(500).json({ message: "Error server!" });
+  }
+});
+
+const resetPassword = async (req, res) => {
+  const { newPassword } = req.body;
+  const { id } = req.params;
+  try {
+    const employee = await Employee.findById(id);
+    if (!employee) {
+      return res
+        .status(404)
+        .json({ message: "Employee not existed! " + id });
+    }
+
+    employee.password = newPassword;
+    await employee.save();
+    return res.status(200).json({ message: "Password updated successfully!" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+module.exports = {
+  getAllEmployees,
+  getEmployee,
+  addEmployee,
+  updateEmployee,
+  deleteEmployee,
+  blockEmployee,
+  approveEmployee,
+  changeRoles,
+  verifyOldPassword,
+  resetPassword,
+};

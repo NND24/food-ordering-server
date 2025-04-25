@@ -74,9 +74,7 @@ const getAllStore = async (req, res) => {
       },
     ]);
     stores = stores.map((store) => {
-      const rating = storeRatings.find(
-        (r) => r._id.toString() == store._id.toString()
-      );
+      const rating = storeRatings.find((r) => r._id.toString() == store._id.toString());
       return {
         ...store,
         avgRating: rating ? rating.avgRating : 0,
@@ -1407,6 +1405,95 @@ const checkRegisterStoreName = async (req, res) => {
   return res.status(200).json({ message: "Tên cửa hàng có thể sử dụng." });
 };
 
+
+const getStoreStats = asyncHandler(async (req, res, next) => {
+  try {
+    const totalStores = await Store.countDocuments();
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const endOfMonth = new Date(startOfMonth);
+    endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+
+    const storesThisMonth = await Store.countDocuments({
+      createdAt: {
+        $gte: startOfMonth,
+        $lt: endOfMonth,
+      },
+    });
+
+    res.status(200).json({
+      code: 200,
+      message: "Lấy thống kê nhà hàng thành công",
+      data: {
+        totalStores,
+        storesThisMonth,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const getPendingStores = asyncHandler(async (req, res, next) => {
+  try {
+    const pendingStores = await Store.find({ status: "PENDING" })
+      .populate("owner", "name email phonenumber")
+      .populate("storeCategory", "name");
+    res.json(pendingStores);
+  } catch (error) {
+    next(error);
+  }
+});
+
+const approveStore = asyncHandler(async (req, res, next) => {
+  const { store_id } = req.params;
+
+  try {
+    const store = await Store.findByIdAndUpdate(store_id, { status: "APPROVED" }, { new: true });
+
+    if (!store) {
+      return next(createError(404, "Cannot find store"));
+    }
+
+    res.json({ message: "Store approved", store });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const blockedStore = asyncHandler(async (req, res, next) => {
+  const { store_id } = req.params;
+
+  try {
+    const store = await Store.findByIdAndUpdate(store_id, { status: "BLOCKED" }, { new: true });
+
+    if (!store) {
+      return next(createError(404, "Cannot find store"));
+    }
+
+    res.json({ message: "Store blocked", store });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const getOngoingStores = asyncHandler(async (req, res, next) => {
+  try {
+    const stores = await Store.find({
+      status: { $in: ["APPROVED", "BLOCKED"] },
+    })
+      .populate("owner", "name email phonenumber")
+      .populate("storeCategory", "name");
+    res.json(stores);
+  } catch (error) {
+    next(error);
+  }
+});
+
+
 module.exports = {
   checkRegisterStoreName,
   getAllDish,
@@ -1431,6 +1518,7 @@ module.exports = {
   deleteToppingGroup,
   addToppingToDish,
   getAllStore,
+r
   updateOrder,
   updateDish,
   createDish,
@@ -1444,4 +1532,10 @@ module.exports = {
   registerStore,
   deleteDish,
   addToppingGroup,
+
+  getStoreStats,
+  getPendingStores,
+  approveStore,
+  blockedStore,
+  getOngoingStores,
 };

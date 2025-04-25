@@ -16,10 +16,29 @@ const getPaginatedData = async (Model, filterOptions = {}, populateFields = [], 
             query = query.skip(skip).limit(limit);
         }
 
-        // Populate fields if specified
-        if (populateFields) {
-            query = query.populate(populateFields);
-        }
+      // Apply pagination
+      query = query.skip(skip).limit(limit);
+    }
+
+    // Populate fields if specified
+    if (populateFields) {
+      if (populateFields == "user") {
+        query = query.populate({
+          path: "user",
+          select: "name avatar",
+        });
+      } else if (populateFields == "user dishes") {
+        query = query
+          .populate({
+            path: "user",
+            select: "name avatar",
+          })
+          .populate("dishes")
+          .populate("store");
+      } else {
+        query = query.populate(populateFields);
+      }
+    }
 
         // Fetch data
         const data = await query;

@@ -65,6 +65,11 @@ var storeSchema = new mongoose.Schema(
     ],
     avatar: { filePath: String, url: String },
     cover: { filePath: String, url: String },
+    status: {
+      type: String,
+      enum: ["PENDING", "APPROVED", "BLOCKED"],
+      default: "PENDING",
+    },
     paperWork: {
       IC_front: { filePath: String, url: String },
       IC_back: { filePath: String, url: String },
@@ -210,7 +215,13 @@ var categorySchema = new mongoose.Schema({
 ratingSchema.statics.getAverageRating = async function (dishId) {
   const result = await this.aggregate([
     { $match: { dish: dishId } },
-    { $group: { _id: "$dish", avgRating: { $avg: "$ratingValue" }, count: { $sum: 1 } } },
+    {
+      $group: {
+        _id: "$dish",
+        avgRating: { $avg: "$ratingValue" },
+        count: { $sum: 1 },
+      },
+    },
   ]);
   return result.length > 0 ? result[0] : { avgRating: 0, count: 0 };
 };
@@ -219,7 +230,13 @@ ratingSchema.statics.getAverageRating = async function (dishId) {
 ratingSchema.statics.getStoreRatingSummary = async function (storeId) {
   const result = await this.aggregate([
     { $match: { store: storeId } },
-    { $group: { _id: "$store", avgRating: { $avg: "$ratingValue" }, count: { $sum: 1 } } },
+    {
+      $group: {
+        _id: "$store",
+        avgRating: { $avg: "$ratingValue" },
+        count: { $sum: 1 },
+      },
+    },
   ]);
   return result.length > 0 ? result[0] : { avgRating: 0, count: 0 };
 };

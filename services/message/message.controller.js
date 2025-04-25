@@ -1,5 +1,6 @@
 const Message = require("./message.model");
 const User = require("../user/user.model");
+const Shipper = require("../shipper/shipper.model");
 const Chat = require("../chat/chat.model");
 const { Store } = require("../store/store.model");
 const createError = require("../../utils/createError");
@@ -70,9 +71,11 @@ const sendMessage = asyncHandler(async (req, res, next) => {
     await Chat.findByIdAndUpdate(id, {
       latestMessage: message,
     });
+    res.json({
+      success: true,
+      data: message,
+    });
 
-    // Return the message as JSON
-    res.json(message);
   } catch (error) {
     // Forward any errors to the error handler
     next(error);
@@ -95,6 +98,23 @@ const getAllMessages = asyncHandler(async (req, res, next) => {
           select: "name avatar"
         }
       });
+//     let messages = await Message.find({ chat: id });
+//     let chat = await Chat.findById(id).populate("latestMessage");
+
+//     const populatedUsers = await Promise.all(
+//       chat.users.map(async (userId) => {
+//         let user = await User.findById(userId).select("name avatar").lean();
+//         if (!user) {
+//           user = await Shipper.findById(userId).select("name avatar").lean();
+//         }
+//         return user;
+//       })
+//     );
+
+//     chat = {
+//       ...chat.toObject(),
+//       users: populatedUsers,
+//     }
 
     if (!messages) next(createError(404, "Message not found!"));
 
@@ -108,8 +128,11 @@ const deleteMessage = asyncHandler(async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const deletedMessage = await Message.findByIdAndDelete(id, { new: true });
-    res.json(deletedMessage);
+    await Message.findByIdAndDelete(id, { new: true });
+    res.json({
+      success: true,
+      data: "Delete successful!",
+    });
   } catch (error) {
     next(error);
   }
