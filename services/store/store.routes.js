@@ -34,6 +34,7 @@ const {
   updateStaff,
   registerStore,
   updateStore,
+  checkRegisterStoreName,
   // createStore,
   // createToppingGroup,
   // createCategory,
@@ -50,8 +51,9 @@ const router = express.Router();
 // Store routes
 router.get("/", getAllStore);
 router.get("/:store_id", getStoreInformation); // CHECK
-router.post("/register-store", registerStore );
+router.post("/register", registerStore );
 router.put("/:store_id", updateStore);
+router.get("/check-name/:name", checkRegisterStoreName)
 
 // Dish routes
 router.get("/:store_id/dish", getAllDish); // CHECK // MOD

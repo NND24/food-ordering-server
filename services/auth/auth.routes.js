@@ -12,12 +12,16 @@ const {
   checkOTP,
   googleLoginWithToken,
   loginWithGoogleMobile,
-  storeOwnByUser
+  storeOwnByUser,
+  registerStoreOwner,
+  checkRegisterStoreOwner
 } = require("./auth.controller");
 
 const router = express.Router();
 
 router.post("/register", register);
+router.post("/register/store-owner", registerStoreOwner);
+router.get("/check-register-store-owner/:email", checkRegisterStoreOwner);
 router.post("/register/shipper", registerShipper);
 router.post("/login", login);
 router.post("/store", authMiddleware, storeOwnByUser)
