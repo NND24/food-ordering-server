@@ -87,6 +87,7 @@ const uploadImages = asyncHandler(async (req, res, next) => {
   );
 
   // Trả về thông tin các file đã upload
+  console.log("Uploaded file details:", uploadedFileDetails);
   res.status(200).json(uploadedFileDetails);
 });
 

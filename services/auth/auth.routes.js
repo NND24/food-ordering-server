@@ -15,6 +15,8 @@ const {
   googleLoginWithToken,
   loginWithGoogleMobile,
   storeOwnByUser,
+  registerStoreOwner,
+  checkRegisterStoreOwner
   forgotPasswordShipper,
   checkOTPForShipper,
   resetPasswordShipper,
@@ -28,6 +30,8 @@ const {
 const router = express.Router();
 
 router.post("/register", register);
+router.post("/register/store-owner", registerStoreOwner);
+router.get("/check-register-store-owner/:email", checkRegisterStoreOwner);
 router.post("/register/shipper", registerShipper);
 router.post("/login", login);
 router.post("/store", authMiddleware, storeOwnByUser);
@@ -43,11 +47,8 @@ router.post("/forgot-password/employee", forgotPasswordEmployee);
 router.post("/check-otp/shipper", checkOTPForShipper);
 router.get("/logout", logout);
 router.post("/check-otp/employee", checkOTPForEmployee);
-
-router.get("/logout", logout);
 router.get("/refresh", getRefreshToken);
 router.get("/refresh/mobile", getRefreshTokenMobile);
-
 router.put("/change-password", authMiddleware, changePassword);
 router.put("/reset-password", resetPassword);
 router.put("/reset-password/shipper", resetPasswordShipper);

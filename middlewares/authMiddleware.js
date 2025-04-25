@@ -23,7 +23,6 @@ const authMiddleware = async (req, res, next) => {
         }
 
         req.user = user;
-
         if (!user) {
           return next(createError(401, "User or Shipper not found"));
         }

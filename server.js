@@ -25,6 +25,8 @@ const cartRoute = require("./services/cart/cart.routes");
 const favoriteRoute = require("./services/favorite/favorite.routes");
 const orderRoute = require("./services/order/order.routes");
 const ratingRoute = require("./routes/rating.route");
+const Chat  = require("./services/chat/chat.model");
+const { setSocketIo, getUserSockets } = require("./utils/socketManager");
 const swaggerUi = require("swagger-ui-express");
 const swaggerJsdoc = require("swagger-jsdoc");
 
@@ -93,7 +95,8 @@ app.use(errorHandler);
 const server = http.createServer(app);
 const io = socketIo(server, { cors: { origin: "*" } });
 
-const userSockets = {};
+setSocketIo(io); // Make io accessible everywhere
+const userSockets = getUserSockets();
 
 io.on("connection", (socket) => {
   socket.on("registerUser", async (userId) => {
@@ -160,8 +163,42 @@ io.on("connection", (socket) => {
     console.log(`User left room: ${chatId}`);
   });
 
-  socket.on("sendMessage", (newMessageReceived) => {
-    io.to(newMessageReceived.id).emit("messageReceived", newMessageReceived);
+  // socket.on("sendMessage", (newMessageReceived) => {
+  //   io.to(newMessageReceived.id).emit("messageReceived", newMessageReceived);
+  //   io.to(`store:${message.storeId}`).emit("storeNewMessage", message);
+  // });
+
+  socket.on("sendMessage", async (newMessageReceived) => {
+    console.log("New message received:", newMessageReceived);
+    
+    const chatId = newMessageReceived.id;
+  
+    try {
+      const chat = await Chat.findById(chatId)
+      if (!chat) {
+        console.error("Chat not found for ID:", chatId);
+        return;
+      }
+      console.log("Chat found:", chat);
+  
+      const storeId = chat.store.toString();
+  
+      // Emit message to user(s) in that chat room
+      io.to(chatId).emit("messageReceived", newMessageReceived);
+  
+      // Emit notification to the store room
+      if (storeId) {
+        console.log("Store ID found:", storeId);
+        io.to(`store:${storeId}`).emit("storeNewMessage", newMessageReceived);
+      }
+    } catch (error) {
+      console.error("Error in sendMessage:", error);
+    }
+  });
+
+  socket.on("joinStoreRoom", (storeId) => {
+    socket.join(`store:${storeId}`);
+    console.log(`Store ${storeId} joined room store:${storeId}`);
   });
 
   socket.on("deleteMessage", (id) => {

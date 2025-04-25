@@ -1,5 +1,5 @@
 const User = require("../user/user.model");
-const { Store } = require("../store/store.model");
+const { Store } = require("../store/store.model")
 const Shipper = require("../shipper/shipper.model");
 const Employee = require("../employee/employee.model");
 const jwt = require("jsonwebtoken");
@@ -8,6 +8,10 @@ const crypto = require("crypto");
 const asyncHandler = require("express-async-handler");
 const { OAuth2Client } = require("google-auth-library");
 const sendEmail = require("../../utils/sendEmail");
+
+const hashPassword = (password, salt) => {
+  return crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
+};
 
 const generateAccessToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1d" });
@@ -44,6 +48,43 @@ const register = asyncHandler(async (req, res, next) => {
   }
 });
 
+const registerStoreOwner = asyncHandler(async (req, res, next) => {
+  const { name, email, phonenumber, gender, password } = req.body;
+  const findUser = await User.findOne({ email });
+  if (!findUser) {
+    // await User.create({
+    //   name,
+    //   email,
+    //   phonenumber,
+    //   gender,
+    //   password,
+    // });
+    res.status(201).json("Tạo tài khoản thành công");
+  } else {
+     res.status(200).json({message : "Tài khoản đã tồn tại", data : findUser});
+    next(createError(409, "Tài khoản đã tồn tại"));
+  }
+});
+
+const checkRegisterStoreOwner = asyncHandler(async (req, res, next) => {
+  const { email } = req.params;
+  const findUser = await User.findOne({ email });
+
+  if (findUser) {
+    if (findUser.role.includes("owner")) {
+      return res.status(200).json({ message: "Tài khoản đã được đăng ký làm chủ cửa hàng", data: findUser, role: "owner"});
+    } else if (findUser.role.includes("staff")) {
+      return res.status(200).json({ message: "Tài khoản đã được đăng ký làm nhân viên cửa hàng", data: findUser, role: "staff" });
+    } else if (findUser.role.includes("shipper")) {
+      return res.status(200).json({ message: "Tài khoản đã được đăng ký làm shipper", data: findUser, role: "shipper" });
+    } else {
+      return res.status(200).json({ message: "Tài khoản đã tồn tại", data: findUser });
+    }
+  } else {
+    return res.status(200).json({ message: "Tài khoản chưa tồn tại", data: null });
+  }
+});
+
 const registerShipper = asyncHandler(async (req, res, next) => {
   const { name, email, phonenumber, gender, password, avatar, vehicle } = req.body;
 
@@ -72,32 +113,41 @@ const registerShipper = asyncHandler(async (req, res, next) => {
 
 const login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
+  const { getRole, getStore } = req.query; // Get query params for role and store info
 
   if (!email || !password) {
     next(createError(400, "Vui lòng điền đầy đủ thông tin"));
   }
 
   const findUser = await User.findOne({ email: email });
+
   if (findUser && (await findUser.isPasswordMatched(password))) {
     const refreshToken = generateRefreshToken(findUser._id);
     await User.findByIdAndUpdate(
       findUser._id,
-      {
-        refreshToken: refreshToken,
-      },
+      { refreshToken: refreshToken },
       { new: true }
     );
+    // Check if the user is associated with a store
+    const store = await Store.findOne({
+      $or: [{ owner: findUser._id }, { staff: findUser._id }],
+    }).select("_id name owner");
+
     res.cookie("refreshToken", refreshToken, {
       maxAge: 30 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
     });
     res.status(200).json({
-      _id: findUser?._id,
-      token: generateAccessToken(findUser?._id),
+      _id: findUser._id,
+      token: generateAccessToken(findUser._id),
+      ...(getRole === "true" && { role: findUser.role }), // Include role if getRole is true
+      ...(getStore === "true" && store && { storeId: store._id, ownerId: store.owner}), // Include storeId & name if requested
     });
   } else {
     return next(createError(401, "Email hoặc mật khẩu không hợp lệ!"));
   }
 });
+
 
 const loginAdmin = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
@@ -378,6 +428,12 @@ const changePassword = asyncHandler(async (req, res, next) => {
   const { _id } = req.user;
   const { oldPassword, newPassword } = req.body;
 
+  // Validate required fields
+  if (!oldPassword || !newPassword) {
+    return next(createError(400, "Mật khẩu cũ và mật khẩu mới là bắt buộc"));
+  }
+
+  // Find the user
   const user = await User.findById(_id);
   if (!user) return next(createError(404, "User not found"));
 
@@ -569,6 +625,8 @@ module.exports = {
   resetPassword,
   forgotPassword,
   checkOTP,
+  registerStoreOwner,
+  checkRegisterStoreOwner,
   storeOwnByUser,
   forgotPasswordShipper,
   checkOTPForShipper,
