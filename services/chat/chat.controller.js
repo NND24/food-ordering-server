@@ -1,6 +1,7 @@
 const User = require("../user/user.model");
 const Chat = require("./chat.model");
 const Message = require("../message/message.model");
+const {Store} = require("../store/store.model");
 const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 
@@ -42,24 +43,124 @@ const createChat = asyncHandler(async (req, res, next) => {
   }
 });
 
+// const getAllChats = asyncHandler(async (req, res, next) => {
+//   try {
+//     await Chat.find({ users: { $elemMatch: { $eq: req.user._id } } })
+//       .populate("users", "name avatar")
+//       .populate("latestMessage")
+//       .sort({ updatedAt: -1 })
+//       .then(async (results) => {
+//         results = await User.populate(results, {
+//           path: "latestMessage.sender",
+//           select: "name avatar",
+//         });
+
+//         res.status(200).json(results);
+//       });
+//   } catch (error) {
+//     next(error);
+//   }
+// });
+
 const getAllChats = asyncHandler(async (req, res, next) => {
   try {
-    await Chat.find({ users: { $elemMatch: { $eq: req.user._id } } })
-      .populate("users", "name avatar")
-      .populate("latestMessage")
-      .sort({ updatedAt: -1 })
-      .then(async (results) => {
-        results = await User.populate(results, {
-          path: "latestMessage.sender",
-          select: "name avatar",
-        });
+    const userId = req.user._id;
+    const userRoles = req.user.role;
 
-        res.status(200).json(results);
-      });
+    let chatQuery = [{ users: userId }];
+
+    if (userRoles.includes("staff") || userRoles.includes("manager")) {
+      const stores = await Store.find({ staff: userId }).select("owner");
+
+      const ownerIds = stores.map((store) => store.owner);
+
+      if (ownerIds.length > 0) {
+        chatQuery.push({ users: { $in: ownerIds } });
+      }
+    }
+    else if (userRoles.includes("storeOwner")) {
+      const store = await Store.findOne({ owner: userId }).select("_id");
+
+      if (store) {
+        chatQuery.push({ store: store._id });
+      }
+    }
+
+    const chats = await Chat.find({
+      $or: chatQuery,
+    })
+      .populate("users", "name avatar")
+      .populate("store", "name avatar")
+      .populate("latestMessage")
+      .sort({ updatedAt: -1 });
+
+    const populatedChats = await User.populate(chats, {
+      path: "latestMessage.sender",
+      select: "name avatar",
+    });
+
+    res.status(200).json(populatedChats);
   } catch (error) {
     next(error);
   }
 });
+
+const createStoreChat = asyncHandler(async (req, res, next) => {
+  const { id, storeId } = req.params;
+
+  if (!id || !storeId) {
+    return next(createError(400, "UserId or StoreId params not sent with request"));
+  }
+
+  try {
+    const store = await Store.findById(storeId);
+    if (!store || !store.owner) {
+      return next(createError(404, "Store or store owner not found"));
+    }
+
+    const ownerId = store.owner;
+
+    let isChat = await Chat.findOne({
+      users: { $all: [ownerId, id] },
+      store: storeId,
+    })
+      .populate("users", "name avatar")
+      .populate("latestMessage")
+      .populate("store", "name avatar");
+
+    if (isChat) {
+      isChat = await User.populate(isChat, {
+        path: "latestMessage.sender",
+        select: "name avatar",
+      });
+      return res.json(isChat);
+    }
+
+    const chatData = {
+      isGroupChat: false,
+      users: [ownerId, id],
+      store: storeId,
+    };
+
+    const createdChat = await Chat.create(chatData);
+
+    const fullChat = await Chat.findById(createdChat._id)
+      .populate("users", "name avatar")
+      .populate("latestMessage")
+      .populate("store", "name avatar");
+
+    const populatedChat = await User.populate(fullChat, {
+      path: "latestMessage.sender",
+      select: "name avatar",
+    });
+
+    return res.status(200).json(populatedChat);
+  } catch (error) {
+    next(error);
+  }
+});
+
+
 
 const deleteChat = asyncHandler(async (req, res, next) => {
   try {
@@ -81,4 +182,5 @@ module.exports = {
   createChat,
   getAllChats,
   deleteChat,
+  createStoreChat,
 };

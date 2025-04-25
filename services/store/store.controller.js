@@ -7,6 +7,8 @@ const {
   Category,
   Topping,
 } = require("./store.model");
+
+const { getSocketIo } = require("../../utils/socketManager");
 const Order = require("../order/order.model");
 const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
@@ -355,7 +357,14 @@ const getDish = async (req, res) => {
     const { dish_id } = req.params;
 
     // Truy vấn danh sách món ăn
-    const dish = await Dish.findById(dish_id);
+    const dish = await Dish.findById(dish_id).populate([
+      { path: "category", select: "name" },
+      {
+        path: "toppingGroups",
+        select: "name toppings",
+        populate: { path: "toppings", select: "name price" }, // Correctly populates toppings inside toppingGroups
+      },
+    ]);
 
     if (!dish) {
       return res.status(404).json({
@@ -385,9 +394,10 @@ const getTopping = async (req, res) => {
     const { group_id } = req.params;
 
     // Truy vấn danh sách món ăn
-    const toppingGroup = await ToppingGroup.findById(group_id).populate(
-      "toppings"
-    );
+    const toppingGroup = await ToppingGroup.findById(group_id).populate({
+      path: "toppings",
+      select: "-toppingGroup",
+    });
 
     if (!toppingGroup) {
       return res.status(404).json({
@@ -823,6 +833,58 @@ const addToppingToGroup = async (req, res) => {
   }
 };
 
+
+const addToppingGroup = async (req, res) => {
+  try {
+    const toppingGroup  = req.body;
+    const { store_id } = req.params;
+    console.log("Store ID:", store_id);
+    console.log("Topping Group:", toppingGroup);
+
+    if (!toppingGroup.name || toppingGroup.name.trim() === "") {
+      return res.status(400).json({ message: "Tên nhóm topping là bắt buộc." });
+    }
+
+    // Check if the topping group already exists
+    const existingGroup = await ToppingGroup.findOne({ name: toppingGroup.name.trim() });
+    if (existingGroup) {
+      return res.status(409).json({ message: "Nhóm topping đã tồn tại." });
+    }
+
+    // Create new topping group
+    const newGroup = new ToppingGroup({
+      name: toppingGroup.name.trim(),
+      store: store_id,
+      toppings: [],
+    });
+
+    const savedGroup = await newGroup.save();
+    return res.status(201).json(savedGroup);
+  } catch (error) {
+    console.error("Add Topping Group Error:", error);
+    return res
+      .status(500)
+      .json({ message: "Lỗi server khi thêm nhóm topping." });
+  }
+};
+
+const deleteToppingGroup = async (req, res) => {
+  try {
+    const { group_id } = req.params;
+
+    const deletedGroup = await ToppingGroup.findByIdAndDelete(group_id);
+
+    if (!deletedGroup) {
+      return res.status(404).json({ message: "Không tìm thấy nhóm topping." });
+    }
+
+    return res.status(200).json({ message: "Xóa nhóm topping thành công." });
+  } catch (error) {
+    console.error("Delete Topping Group Error:", error);
+    return res.status(500).json({ message: "Lỗi server khi xóa nhóm topping." });
+  }
+};
+
 const removeToppingFromGroup = async (req, res) => {
   try {
     const { group_id, topping_id } = req.params;
@@ -862,27 +924,6 @@ const removeToppingFromGroup = async (req, res) => {
   }
 };
 
-const deleteToppingGroup = async (req, res) => {
-  try {
-    const { group_id } = req.params;
-
-    // Find and delete the topping group
-    const toppingGroup = await ToppingGroup.findByIdAndDelete(group_id);
-    if (!toppingGroup) {
-      return res.status(404).json({
-        success: false,
-        message: "Topping group not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Topping group deleted successfully",
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
 
 const addToppingToDish = async (req, res) => {
   try {
@@ -1008,7 +1049,14 @@ const updateDish = async (req, res) => {
     const updatedData = req.body; // Get the updated data from the request body
 
     // Ensure the order exists
-    const dish = await Dish.findById(dish_id);
+    const dish = await Dish.findById(dish_id).populate([
+      { path: "category", select: "name" },
+      {
+        path: "toppingGroups",
+        select: "name toppings",
+        populate: { path: "toppings", select: "name price" }, // Correctly populates toppings inside toppingGroups
+      },
+    ]);
     if (!dish) {
       return res.status(404).json({ message: "Dish not found" });
     }
@@ -1031,7 +1079,6 @@ const createDish = async (req, res) => {
   try {
     const { store_id } = req.params; // Get store ID from request parameters
     const dishData = req.body; // Get dish details from request body
-
     // Ensure required fields exist
     if (!dishData.name || !dishData.price) {
       return res
@@ -1039,6 +1086,11 @@ const createDish = async (req, res) => {
         .json({ message: "Dish name and price are required" });
     }
 
+    Object.keys(dishData).forEach((key) => {
+      if (dishData[key] === "") {
+        delete dishData[key];
+      }
+    });
     // Check if the dish with the same name already exists in the same store
     const existingDish = await Dish.findOne({
       name: dishData.name,
@@ -1067,6 +1119,34 @@ const createDish = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating dish:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const deleteDish = async (req, res) => {
+  try {
+    const { dish_id } = req.params;
+
+    // Validate input
+    if (!dish_id) {
+      return res.status(400).json({ message: "Dish ID is required" });
+    }
+
+    // Check if the dish exists
+    const dish = await Dish.findById(dish_id);
+    if (!dish) {
+      return res.status(404).json({ message: "Dish not found" });
+    }
+
+    // Delete the dish
+    await Dish.findByIdAndDelete(dish_id);
+
+    return res.status(200).json({
+      message: "Dish deleted successfully",
+      data: dish,
+    });
+  } catch (error) {
+    console.error("Error deleting dish:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -1136,6 +1216,20 @@ const updateCategory = async (req, res) => {
 const deleteCategory = async (req, res) => {
   try {
     const { category_id } = req.params;
+
+    // Check if the category is used in any dish
+    const dishesUsingCategory = await Dish.countDocuments({
+      category: category_id,
+    });
+
+    if (dishesUsingCategory > 0) {
+      return res
+        .status(400)
+        .json({
+          message: "Cannot delete category, it is used in one or more dishes",
+          data: dishesUsingCategory,
+        });
+    }
 
     // Find and delete category
     const deletedCategory = await Category.findByIdAndDelete(category_id);
@@ -1278,8 +1372,8 @@ const registerStore = asyncHandler(async (req, res) => {
   if (existingStore) {
     return res.status(400).json({ message: "Tên cửa hàng đã tồn tại!" });
   }
-
   // Create the store
+
   const store = await Store.create({
     name: name.trim(),
     owner: userId,
@@ -1298,6 +1392,7 @@ const registerStore = asyncHandler(async (req, res) => {
     .status(201)
     .json({ message: "Cửa hàng đã được đăng ký thành công!", store });
 });
+
 
 const checkRegisterStoreName = async (req, res) => {
   const { name } = req.params;
@@ -1347,4 +1442,6 @@ module.exports = {
   updateStaff,
   updateStore,
   registerStore,
+  deleteDish,
+  addToppingGroup,
 };

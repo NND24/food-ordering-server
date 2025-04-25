@@ -35,6 +35,8 @@ const {
   registerStore,
   updateStore,
   checkRegisterStoreName,
+  deleteDish,
+  addToppingGroup,
   // createStore,
   // createToppingGroup,
   // createCategory,
@@ -66,6 +68,7 @@ router.get("/dish/:dish_id/topping", getToppingFromDish); // CHECK
 router.post("/dish/:dish_id/topping", addToppingToDish); // CHECK
 router.put("/dish/:dish_id", updateDish)
 router.post("/:store_id/dish/add", createDish);
+router.delete("/dish/:dish_id", deleteDish);
 
 
 // Order routes
@@ -76,6 +79,7 @@ router.put("/order/:order_id", updateOrder);
 // Topping routes
 router.get("/:store_id/topping", getAllTopping); // CHECK
 router.get("/topping-group/:group_id", getTopping); // CHECK
+router.post("/:store_id/topping-group/add", addToppingGroup); // CHECK
 router.post("/topping-group/:group_id/topping", addToppingToGroup); // CHECK
 router.put("/topping-group/:group_id/topping/:topping_id", updateTopping)
 router.delete("/topping-group/:group_id/topping/:topping_id", removeToppingFromGroup); // CHECK
