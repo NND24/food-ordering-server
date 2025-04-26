@@ -19,6 +19,7 @@ const getUserOrder = asyncHandler(async (req, res, next) => {
     })
     .populate("items.dish")
     .populate("items.toppings")
+    .populate("shipper")
     .sort({ updatedAt: -1 });
 
   if (!orders || orders.length === 0) {
@@ -53,7 +54,8 @@ const getOrderDetail = asyncHandler(async (req, res, next) => {
       path: "store",
     })
     .populate("items.dish")
-    .populate("items.toppings");
+    .populate("items.toppings")
+    .populate("shipper");
 
   if (!orderDetail || orderDetail.length === 0) {
     next(
@@ -87,6 +89,7 @@ const getFinishedOrders = asyncHandler(async (req, res, next) => {
         data: [],
       });
     }
+
 
     res.status(200).json({
       success: true,
@@ -235,13 +238,38 @@ const updateOrderStatus = asyncHandler(async (req, res, next) => {
   });
 });
 
+const cancelOrder = asyncHandler(async (req, res, next) => {
+  const { orderId } = req.params;
+
+  const order = await Order.findById(orderId);
+  if (!order) {
+    return next(createError(404, "Order not found"));
+  }
+
+  const cancellableStatuses = ["preorder", "pending", "confirmed"];
+
+  if (cancellableStatuses.includes(order.status)) {
+    order.status = "cancelled";
+    order.cancelledAt = new Date();
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Order status updated successfully",
+    });
+  } else {
+    res.status(409).json({
+      success: false,
+      message: `Cannot cancel an order with status '${order.status}'. Only pending orders can be cancelled.`,
+    });
+  }
+});
+
 const getDeliveredOrders = asyncHandler(async (req, res, next) => {
   const shipperId = req?.user?._id;
 
   if (!shipperId) {
-    return next(
-      createError(400, { success: false, message: "Shipper not found" })
-    );
+    return next(createError(400, { success: false, message: "Shipper not found" }));
   }
 
   try {
@@ -301,10 +329,7 @@ const getShipperOrders = asyncHandler(async (req, res, next) => {
 
     const ordersThisMonth = allOrders.filter((order) => {
       const orderDate = new Date(order.createdAt);
-      return (
-        orderDate.getMonth() + 1 === currentMonth &&
-        orderDate.getFullYear() === currentYear
-      );
+      return orderDate.getMonth() + 1 === currentMonth && orderDate.getFullYear() === currentYear;
     });
 
     res.status(200).json({
@@ -398,4 +423,5 @@ module.exports = {
   getShipperOrders,
   getOrderStats,
   getMonthlyOrderStats,
+  cancelOrder,
 };

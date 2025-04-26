@@ -72,7 +72,7 @@ var orderSchema = new mongoose.Schema(
         "preorder",
         "pending",
         "confirmed",
-        "preparing",
+        "preparing", // Confirm and preparing are the same
         "finished",
         "taken",
         "delivering",
@@ -85,6 +85,14 @@ var orderSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       enum: ["cash", "credit_card"],
+    },
+    cancelledAt: {
+      type: Date,
+      default: null,
+      index: {
+        expireAfterSeconds: 1800, // 30 min
+        partialFilterExpression: { status: "cancelled" },
+      },
     },
   },
   { timestamps: true }

@@ -17,7 +17,7 @@ const validateMongoDbId = require("../../middlewares/validateMongoDBId");
 const router = express.Router();
 router.get("/", authMiddleware, getUserCart);
 router.get("/:storeId", authMiddleware, getUserCartInStore);
-router.get("/:cartId", validateMongoDbId("cartId"), authMiddleware, getDetailCart);
+router.get("/detail/:cartId", validateMongoDbId("cartId"), authMiddleware, getDetailCart);
 
 router.post("/increase", authMiddleware, increaseQuantity);
 router.post("/decrease", authMiddleware, decreaseQuantity);
