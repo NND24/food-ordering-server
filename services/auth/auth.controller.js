@@ -102,7 +102,7 @@ const registerShipper = asyncHandler(async (req, res, next) => {
     gender,
     password,
     vehicle,
-    avatar: avatar || { url: "" }, // Nếu không có ảnh thì để trống
+    ...(avatar && { avatar }), // Nếu không có ảnh thì để trống
   });
 
   res.status(201).json({
@@ -192,7 +192,7 @@ const loginShipper = asyncHandler(async (req, res, next) => {
   }
   if (findShipper && (await findShipper.isPasswordMatched(password))) {
     const refreshToken = generateRefreshToken(findShipper._id);
-    await User.findByIdAndUpdate(
+    await Shipper.findByIdAndUpdate(
       findShipper._id,
       {
         refreshToken: refreshToken,

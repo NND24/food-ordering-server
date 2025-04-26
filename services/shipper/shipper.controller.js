@@ -2,6 +2,7 @@ const Shipper = require("./shipper.model");
 const Order = require("../order/order.model");
 const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
+const sendEmail = require("../../utils/sendEmail");
 
 const getAllShippers = asyncHandler(async (req, res, next) => {
   try {
@@ -79,6 +80,18 @@ const approveShipper = asyncHandler(async (req, res, next) => {
     if (!shipper) {
       return next(createError(404, "Không tìm thấy shipper"));
     }
+
+    const resetURL = `
+          <p>Tài khoản của bạn đã được duyệt/ mở khóa</p>
+          <pBạn có thể đăng nhập bằng email và mật khẩu mà bạn đăng ký</p>
+        `;
+      const data = {
+        to: shipper.email,
+        text: "",
+        subject: "Approve/ Reopen the account",
+        html: resetURL,
+      };
+      await sendEmail(data);
 
     res.json({ message: "Shipper đã được duyệt", shipper });
   } catch (error) {

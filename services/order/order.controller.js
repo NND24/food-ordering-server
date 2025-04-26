@@ -73,27 +73,39 @@ const getOrderDetail = asyncHandler(async (req, res, next) => {
 });
 
 const getFinishedOrders = asyncHandler(async (req, res, next) => {
-  const finishedOrders = await Order.find({ status: "finished" })
-    .populate({ path: "store" })
-    .populate("items.dish")
-    .populate("items.toppings")
-    .populate({ path: "user" })
-    .sort({ updatedAt: -1 });
+  try {
+    const finishedOrders = await Order.find({ status: "finished" })
+      .populate({ path: "store" })
+      .populate("items.dish")
+      .populate("items.toppings")
+      .populate({ path: "user" })
+      .sort({ updatedAt: -1 });
 
-  if (!finishedOrders || finishedOrders.length === 0) {
+    if (!finishedOrders || finishedOrders.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "Không có đơn hàng nào đã hoàn tất.",
+        count: 0,
+        data: [],
+      });
+    }
+
+
+    res.status(200).json({
+      success: true,
+      message: "Lấy danh sách đơn hàng đã hoàn tất thành công.",
+      count: finishedOrders.length,
+      data: finishedOrders,
+    });
+  } catch (err) {
     return next(
-      createError(404, {
+      createError(500, {
         success: false,
-        message: "No finished orders found",
+        message: "Đã xảy ra lỗi khi lấy đơn hàng.",
+        error: err.message,
       })
     );
   }
-
-  res.status(200).json({
-    success: true,
-    count: finishedOrders.length,
-    data: finishedOrders,
-  });
 });
 
 const acceptOrder = asyncHandler(async (req, res, next) => {
@@ -184,7 +196,11 @@ const getOnGoingOrder = asyncHandler(async (req, res, next) => {
   const takenOrder = await Order.findOne({
     shipper: shipperId,
     status: { $in: ["taken", "delivering", "delivered"] },
-  }).populate("store", "name address avatar");
+  })
+    .populate({ path: "store" })
+    .populate("items.dish")
+    .populate("items.toppings")
+    .populate({ path: "user" });
 
   if (!takenOrder) {
     return res.status(404).json({
@@ -203,7 +219,11 @@ const updateOrderStatus = asyncHandler(async (req, res, next) => {
   const { orderId } = req.params;
   const { status } = req.body;
 
-  const order = await Order.findById(orderId);
+  const order = await Order.findById(orderId)
+    .populate({ path: "store" })
+    .populate("items.dish")
+    .populate("items.toppings")
+    .populate({ path: "user" });
   if (!order) {
     return next(createError(404, "Order not found"));
   }
@@ -270,9 +290,10 @@ const getDeliveredOrders = asyncHandler(async (req, res, next) => {
       shipper: shipperId,
       status: "done",
     })
-      .populate("store")
+      .populate({ path: "store" })
       .populate("items.dish")
       .populate("items.toppings")
+      .populate({ path: "user" })
       .sort({ updatedAt: -1 })
       .skip(skip)
       .limit(limit);
