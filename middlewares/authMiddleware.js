@@ -24,9 +24,6 @@ const authMiddleware = async (req, res, next) => {
 
         req.user = user;
 
-        console.log("🚀 Authenticated User:", req.user);
-        console.log("🚀 Is Shipper:", req.isShipper);
-
         if (!user) {
           return next(createError(401, "User or Shipper not found"));
         }
