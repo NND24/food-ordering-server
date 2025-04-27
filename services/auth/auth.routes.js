@@ -16,7 +16,7 @@ const {
   loginWithGoogleMobile,
   storeOwnByUser,
   registerStoreOwner,
-  checkRegisterStoreOwner
+  checkRegisterStoreOwner,
   forgotPasswordShipper,
   checkOTPForShipper,
   resetPasswordShipper,
