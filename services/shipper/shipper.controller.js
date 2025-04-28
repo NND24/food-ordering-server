@@ -36,15 +36,29 @@ const getShipper = asyncHandler(async (req, res, next) => {
 
 const updateShipper = asyncHandler(async (req, res, next) => {
   const shipperId = req?.user?._id;
+
+  if (!shipperId) {
+    res.status(400);
+    throw new Error("Shipper ID không hợp lệ");
+  }
+
   try {
-    const updateShipper = await Shipper.findByIdAndUpdate(shipperId, req.body, {
-      new: true,
+    const updatedShipper = await Shipper.findByIdAndUpdate(shipperId, req.body, {
+      new: true, // trả về document đã cập nhật
+      runValidators: true, // kiểm tra validate schema
     });
-    res.json(updateShipper);
+
+    if (!updatedShipper) {
+      res.status(404);
+      throw new Error("Không tìm thấy shipper");
+    }
+
+    res.json(updatedShipper);
   } catch (error) {
     next(error);
   }
 });
+
 
 const deleteShipper = asyncHandler(async (req, res, next) => {
   const shipperId = req.params.id;
@@ -126,32 +140,53 @@ const verifyOldPassword = asyncHandler(async (req, res) => {
   try {
     const shipper = await Shipper.findById(shipperId);
     if (!shipper) {
-      return res.status(404).json({ message: "Shipper không tồn tại!" });
+      return res.status(404).json({
+        status: "error",
+        message: "Shipper không tồn tại!",
+      });
     }
 
     const isMatch = await shipper.isPasswordMatched(oldPassword);
     if (!isMatch) {
-      return res.status(400).json({ message: "Mật khẩu cũ không đúng!" });
+      return res.status(400).json({
+        status: "error",
+        message: "Mật khẩu cũ không đúng!",
+      });
     }
 
-    res.status(200).json({ message: "Mật khẩu đúng!" });
+    res.status(200).json({
+      status: "success",
+      message: "Mật khẩu đúng!",
+      shipperId: shipper._id,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server!" });
+    res.status(500).json({
+      status: "error",
+      message: "Lỗi server!",
+    });
   }
 });
+
 
 const resetPassword = asyncHandler(async (req, res, next) => {
   const { newPassword } = req.body;
   const shipperId = req.user._id;
 
   const shipper = await Shipper.findOne({ _id: shipperId });
-  if (!shipper) return next(createError(404, "Không tìm thấy shipper"));
+  if (!shipper) {
+    return next(createError(404, "Không tìm thấy shipper"));
+  }
 
   shipper.password = newPassword;
   await shipper.save();
 
-  res.status(200).json("Đổi mật khẩu thành công!");
+  res.status(200).json({
+    status: "success",
+    message: "Đổi mật khẩu thành công!",
+    shipperId: shipper._id,
+  });
 });
+
 
 const getPendingShippers = asyncHandler(async (req, res, next) => {
   try {
