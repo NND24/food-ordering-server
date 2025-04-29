@@ -16,9 +16,6 @@ const getPaginatedData = async (Model, filterOptions = {}, populateFields = [], 
       query = query.skip(skip).limit(limit);
     }
 
-    // Apply pagination
-    query = query.skip(skip).limit(limit);
-
     // Populate fields if specified
     if (populateFields) {
       if (populateFields == "user") {
