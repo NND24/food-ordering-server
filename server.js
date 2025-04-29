@@ -25,7 +25,7 @@ const cartRoute = require("./services/cart/cart.routes");
 const favoriteRoute = require("./services/favorite/favorite.routes");
 const orderRoute = require("./services/order/order.routes");
 const ratingRoute = require("./routes/rating.route");
-const Chat  = require("./services/chat/chat.model");
+const Chat = require("./services/chat/chat.model");
 const { setSocketIo, getUserSockets } = require("./utils/socketManager");
 const swaggerUi = require("swagger-ui-express");
 const swaggerJsdoc = require("swagger-jsdoc");
@@ -36,7 +36,7 @@ connectDB();
 app.use(morgan("dev"));
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
+    origin: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "https://ptit-food.vercel.app"],
     credentials: true,
   })
 );
@@ -170,22 +170,22 @@ io.on("connection", (socket) => {
 
   socket.on("sendMessage", async (newMessageReceived) => {
     console.log("New message received:", newMessageReceived);
-    
+
     const chatId = newMessageReceived.id;
-  
+
     try {
-      const chat = await Chat.findById(chatId)
+      const chat = await Chat.findById(chatId);
       if (!chat) {
         console.error("Chat not found for ID:", chatId);
         return;
       }
       console.log("Chat found:", chat);
-  
+
       const storeId = chat.store.toString();
-  
+
       // Emit message to user(s) in that chat room
       io.to(chatId).emit("messageReceived", newMessageReceived);
-  
+
       // Emit notification to the store room
       if (storeId) {
         console.log("Store ID found:", storeId);

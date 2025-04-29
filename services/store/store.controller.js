@@ -41,7 +41,7 @@ const getAllDish = async (req, res) => {
 
 const getAllStore = async (req, res) => {
   try {
-    const { name, category, sort, limit, page } = req.query;
+    const { name, category, sort, limit, page, lat, lon } = req.query;
     let filterOptions = {};
     if (name) filterOptions.name = { $regex: name, $options: "i" };
     if (category) {
@@ -69,6 +69,43 @@ const getAllStore = async (req, res) => {
         amountRating: rating ? rating.amountRating : 0,
       };
     });
+
+    if (lat && lon) {
+      const latUser = parseFloat(lat);
+      const lonUser = parseFloat(lon);
+
+      const toRad = (value) => (value * Math.PI) / 180;
+
+      const calculateDistance = (lat1, lon1, lat2, lon2) => {
+        const R = 6371; // bán kính Trái Đất (km)
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c;
+        return distance;
+      };
+
+      // Sau khi tính khoảng cách
+      stores = stores.map((store) => {
+        if (store.address?.lat != null && store.address?.lon != null) {
+          store.distance = calculateDistance(latUser, lonUser, store.address.lat, store.address.lon);
+        } else {
+          store.distance = Infinity;
+        }
+        return store;
+      });
+
+      // Lọc các store trong 70
+      const storesWithin70km = stores.filter((store) => store.distance <= 70);
+
+      // Nếu có store nào trong 70km thì chỉ lấy các store đó, nếu không thì lấy tất cả
+      if (storesWithin70km.length > 0) {
+        stores = storesWithin70km;
+      }
+    }
 
     // Apply sorting manually
     if (sort === "rating") {
