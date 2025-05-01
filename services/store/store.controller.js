@@ -737,7 +737,7 @@ const getToppingFromDish = async (req, res) => {
 const createToppingGroup = async (req, res) => {
   try {
     const { store_id } = req.params;
-    const { name, toppings } = req.body;
+    const { name, onlyOnce, toppings } = req.body;
 
     // Validate store_id
     const store = await Store.findById(store_id);
@@ -752,6 +752,7 @@ const createToppingGroup = async (req, res) => {
     const toppingGroup = new ToppingGroup({
       name,
       store: store_id,
+      onlyOnce,
       toppings, // Expecting an array of toppings from request body
     });
 
