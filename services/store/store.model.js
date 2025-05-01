@@ -104,6 +104,10 @@ var toppingGroupSchema = new mongoose.Schema(
       ref: "Store",
       required: true,
     },
+    onlyOnce: {
+      type: Boolean,
+      default: false,
+    },
     toppings: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -159,13 +163,9 @@ var staffSchema = new mongoose.Schema(
       ref: "Store",
       required: true,
     },
-    
-
   },
   { timestamps: true }
 );
-
-
 
 var ratingSchema = new mongoose.Schema(
   {
