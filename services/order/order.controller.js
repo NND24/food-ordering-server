@@ -72,6 +72,41 @@ const getOrderDetail = asyncHandler(async (req, res, next) => {
   });
 });
 
+const getOrderDetailForDirectionShipper = asyncHandler(async (req, res, next) => {
+  const { orderId } = req.params;
+
+  if (!orderId) {
+    next(
+      createError(400, {
+        success: false,
+        message: "orderId not found",
+      })
+    );
+  }
+
+  const orderDetail = await Order.findById(orderId)
+    .populate({
+      path: "store",
+    })
+    .populate("items.dish")
+    .populate("items.toppings").populate({ path: "user" });
+
+  if (!orderDetail || orderDetail.length === 0) {
+    next(
+      createError(404, {
+        success: false,
+        message: "Order not found",
+      })
+    );
+  }
+
+  res.status(200).json({
+    success: true,
+    data: orderDetail,
+  });
+});
+
+
 const getFinishedOrders = asyncHandler(async (req, res, next) => {
   try {
     const finishedOrders = await Order.find({ status: "finished" })
@@ -424,4 +459,5 @@ module.exports = {
   getOrderStats,
   getMonthlyOrderStats,
   cancelOrder,
+  getOrderDetailForDirectionShipper
 };
