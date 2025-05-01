@@ -504,25 +504,35 @@ const checkOTP = asyncHandler(async (req, res, next) => {
 
 const forgotPasswordShipper = asyncHandler(async (req, res, next) => {
   const { email } = req.body;
+
   const shipper = await Shipper.findOne({ email, isGoogleLogin: false });
-  if (!shipper)
-    return next(createError("404", "Tài khoản không tồn tại hoặc tài khoản được đăng nhập bằng phương thức khác"));
+  if (!shipper) {
+    return next(
+      createError(404, "Tài khoản không tồn tại hoặc tài khoản được đăng nhập bằng phương thức khác")
+    );
+  }
 
   const otp = await shipper.createOtp();
   await shipper.save();
 
   const resetURL = `
-      <p>Mã OTP của bạn là: ${otp}</p>
-      <p>Vui lòng nhập mã này để lấy lại mật khẩu. OTP sẽ hết hạn trong 2 phút</p>
-    `;
+    <p>Mã OTP của bạn là: ${otp}</p>
+    <p>Vui lòng nhập mã này để lấy lại mật khẩu. OTP sẽ hết hạn trong 2 phút</p>
+  `;
   const data = {
     to: email,
     text: "",
     subject: "Forgot Password OTP",
     html: resetURL,
   };
+
   await sendEmail(data);
-  res.status(200).json("Send email successfully");
+
+  res.json({
+    code: 200,
+    status: "success",
+    message: "Gửi email thành công. Vui lòng kiểm tra hộp thư để lấy mã OTP.",
+  });
 });
 
 const checkOTPForShipper = asyncHandler(async (req, res, next) => {
@@ -535,26 +545,47 @@ const checkOTPForShipper = asyncHandler(async (req, res, next) => {
     otpExpires: { $gt: Date.now() },
   });
 
-  if (!shipper) return next(createError("400", "OPT đã hết hạn hoặc không đúng mã, vui lòng thử lại"));
+  if (!shipper) {
+    return res.status(400).json({
+      code: 400,
+      status: "error",
+      message: "OTP đã hết hạn hoặc không đúng mã, vui lòng thử lại",
+    });
+  }
 
   shipper.otp = undefined;
   shipper.otpExpires = undefined;
   await shipper.save();
 
-  res.status(200).json("OTP hợp lệ");
+  return res.status(200).json({
+    code: 200,
+    status: "success",
+    message: "OTP hợp lệ",
+  });
 });
 
 const resetPasswordShipper = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
 
   const shipper = await Shipper.findOne({ email });
-  if (!shipper) return next(createError(404, "Shipper not found"));
+  if (!shipper) {
+    return res.status(404).json({
+      code: 404,
+      status: "error",
+      message: "Tài khoản không tồn tại",
+    });
+  }
 
   shipper.password = password;
   await shipper.save();
 
-  res.status(200).json("Đổi mật khẩu thành công!");
+  return res.status(200).json({
+    code: 200,
+    status: "success",
+    message: "Đổi mật khẩu thành công!",
+  });
 });
+
 
 const forgotPasswordEmployee = asyncHandler(async (req, res, next) => {
   const { email } = req.body;
