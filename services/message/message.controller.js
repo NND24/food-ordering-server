@@ -26,10 +26,7 @@ const sendMessage = asyncHandler(async (req, res, next) => {
 
   // Get the store the user belongs to (as a staff member)
   const userStoreBelong = await Store.findOne({
-    $or: [
-      { staff: requestUser._id },
-      { owner: requestUser._id }
-    ]
+    $or: [{ staff: requestUser._id }, { owner: requestUser._id }],
   });
 
   // If the chat has a store and user is staff, verify store match
@@ -101,6 +98,15 @@ const getAllMessages = asyncHandler(async (req, res, next) => {
       })
     );
     chat.users = populatedUsers;
+
+    // Populate sender trong latestMessage
+    if (chat.latestMessage?.sender) {
+      let sender = await User.findById(chat.latestMessage.sender).select("name avatar").lean();
+      if (!sender) {
+        sender = await Shipper.findById(chat.latestMessage.sender).select("name avatar").lean();
+      }
+      chat.latestMessage.sender = sender;
+    }
 
     // Populate sender trong messages
     const populatedMessages = await Promise.all(

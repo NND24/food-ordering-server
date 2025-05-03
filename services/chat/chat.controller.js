@@ -127,24 +127,34 @@ const getAllChats = asyncHandler(async (req, res, next) => {
       chats.map(async (chat) => {
         const populatedUsers = await Promise.all(
           chat.users.map(async (userId) => {
-            let user = await User.findById(userId).select("name avatar").lean().lean();
+            let user = await User.findById(userId).select("name avatar").lean();
             if (!user) {
-              user = await Shipper.findById(userId).select("name avatar").lean().lean();
+              user = await Shipper.findById(userId).select("name avatar").lean();
             }
             return user;
           })
         );
+
+        let populatedSender = null;
+        if (chat.latestMessage?.sender) {
+          populatedSender = await User.findById(chat.latestMessage.sender).select("name avatar").lean();
+          if (!populatedSender) {
+            populatedSender = await Shipper.findById(chat.latestMessage.sender).select("name avatar").lean();
+          }
+        }
+
         return {
           ...chat.toObject(),
           users: populatedUsers,
+          latestMessage: chat.latestMessage
+            ? {
+                ...chat.latestMessage.toObject(),
+                sender: populatedSender,
+              }
+            : null,
         };
       })
     );
-
-    const populatedChats = await User.populate(chats, {
-      path: "latestMessage.sender",
-      select: "name avatar",
-    });
 
     res.status(200).json(chats);
   } catch (error) {
