@@ -205,6 +205,7 @@ const loginShipper = asyncHandler(async (req, res, next) => {
     });
     res.status(200).json({
       _id: findShipper?._id,
+      email: findShipper.email,
       token: generateAccessToken(findShipper?._id),
     });
   } else {
