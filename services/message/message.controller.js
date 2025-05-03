@@ -29,9 +29,12 @@ const sendMessage = asyncHandler(async (req, res, next) => {
   );
 
   // Get the store the user belongs to (as a staff member)
-  const userStoreBelong = await Store.findOne({ staff: requestUser._id });
-
-  let isStoreChat = false;
+  const userStoreBelong = await Store.findOne({
+    $or: [
+      { staff: requestUser._id },
+      { owner: requestUser._id }
+    ]
+  });
 
   // If the chat has a store and user is staff, verify store match
   if (chat.store && isStaff) {
