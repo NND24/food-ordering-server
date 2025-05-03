@@ -2,12 +2,13 @@ const User = require("../user/user.model");
 const Shipper = require("../shipper/shipper.model");
 const Chat = require("./chat.model");
 const Message = require("../message/message.model");
-const {Store} = require("../store/store.model");
+const { Store } = require("../store/store.model");
 const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
 
 const createChat = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
+  const { storeId } = req.body;
 
   if (!id) {
     return next(createError(400, "UserId params not sent with request"));
@@ -29,7 +30,7 @@ const createChat = asyncHandler(async (req, res, next) => {
           return user;
         })
       );
-    
+
       return res.json({
         ...isChat.toObject(),
         users: populatedUsers,
@@ -37,28 +38,37 @@ const createChat = asyncHandler(async (req, res, next) => {
     }
 
     // Nếu không có chat, tạo mới
-    const chatData = {
-      isGroupChat: false,
-      users: [req.user._id, id],
-    };
+    let chatData = {};
+    if (storeId) {
+      chatData = {
+        isGroupChat: false,
+        users: [req.user._id, id],
+        store: storeId,
+      };
+    } else {
+      chatData = {
+        isGroupChat: false,
+        users: [req.user._id, id],
+      };
+    }
 
     const createdChat = await Chat.create(chatData);
     const fullChat = await Chat.findById(createdChat._id).populate("latestMessage");
 
-const populatedUsers = await Promise.all(
-  fullChat.users.map(async (userId) => {
-    let user = await User.findById(userId).select("name avatar").lean();
-    if (!user) {
-      user = await Shipper.findById(userId).select("name avatar").lean();
-    }
-    return user;
-  })
-);
+    const populatedUsers = await Promise.all(
+      fullChat.users.map(async (userId) => {
+        let user = await User.findById(userId).select("name avatar").lean();
+        if (!user) {
+          user = await Shipper.findById(userId).select("name avatar").lean();
+        }
+        return user;
+      })
+    );
 
-res.status(200).json({
-  ...fullChat.toObject(),
-  users: populatedUsers,
-});
+    res.status(200).json({
+      ...fullChat.toObject(),
+      users: populatedUsers,
+    });
   } catch (error) {
     next(error);
   }
@@ -98,8 +108,7 @@ const getAllChats = asyncHandler(async (req, res, next) => {
       if (ownerIds.length > 0) {
         chatQuery.push({ users: { $in: ownerIds } });
       }
-    }
-    else if (userRoles.includes("storeOwner")) {
+    } else if (userRoles.includes("storeOwner")) {
       const store = await Store.findOne({ owner: userId }).select("_id");
 
       if (store) {
@@ -107,20 +116,37 @@ const getAllChats = asyncHandler(async (req, res, next) => {
       }
     }
 
-    const chats = await Chat.find({
+    let chats = await Chat.find({
       $or: chatQuery,
     })
-      .populate("users", "name avatar")
       .populate("store", "name avatar")
       .populate("latestMessage")
       .sort({ updatedAt: -1 });
+
+    chats = await Promise.all(
+      chats.map(async (chat) => {
+        const populatedUsers = await Promise.all(
+          chat.users.map(async (userId) => {
+            let user = await User.findById(userId).select("name avatar").lean().lean();
+            if (!user) {
+              user = await Shipper.findById(userId).select("name avatar").lean().lean();
+            }
+            return user;
+          })
+        );
+        return {
+          ...chat.toObject(),
+          users: populatedUsers,
+        };
+      })
+    );
 
     const populatedChats = await User.populate(chats, {
       path: "latestMessage.sender",
       select: "name avatar",
     });
 
-    res.status(200).json(populatedChats);
+    res.status(200).json(chats);
   } catch (error) {
     next(error);
   }
@@ -180,8 +206,6 @@ const createStoreChat = asyncHandler(async (req, res, next) => {
     next(error);
   }
 });
-
-
 
 const deleteChat = asyncHandler(async (req, res, next) => {
   try {

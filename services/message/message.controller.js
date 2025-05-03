@@ -19,14 +19,10 @@ const sendMessage = asyncHandler(async (req, res, next) => {
   const requestUser = await User.findById(req.user._id);
 
   // Check if the user's role includes staff-type roles
-  const isStaff = requestUser.role.some(role =>
-    ["owner", "manager", "staff"].includes(role)
-  );
+  const isStaff = requestUser.role.some((role) => ["owner", "manager", "staff"].includes(role));
 
   // Check if the current user is one of the chat participants (client side)
-  const isClientChat = chat.users.some(
-    (u) => u._id.toString() === req.user._id.toString()
-  );
+  const isClientChat = chat.users.some((u) => u._id.toString() === req.user._id.toString());
 
   // Get the store the user belongs to (as a staff member)
   const userStoreBelong = await Store.findOne({
@@ -78,50 +74,49 @@ const sendMessage = asyncHandler(async (req, res, next) => {
       success: true,
       data: message,
     });
-
   } catch (error) {
     // Forward any errors to the error handler
     next(error);
   }
 });
 
-
 const getAllMessages = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
   try {
-    const messages = await Message.find({ chat: id }).populate("sender", "name avatar");
-    const chat = await Chat.findById(id)
-      .populate("users", "name avatar")
-      .populate("store")
-      .populate({
-        path: "latestMessage",
-        populate: {
-          path: "sender",
-          select: "name avatar"
+    // Lấy tin nhắn và chat
+    let messages = await Message.find({ chat: id }).lean(); // Dùng lean để dễ chỉnh
+    let chat = await Chat.findById(id).populate("store", "name avatar").populate("latestMessage").lean();
+
+    if (!chat) return next(createError(404, "Chat not found"));
+
+    // Populate users trong chat (có thể là User hoặc Shipper)
+    const populatedUsers = await Promise.all(
+      chat.users.map(async (userId) => {
+        let user = await User.findById(userId).select("name avatar").lean();
+        if (!user) {
+          user = await Shipper.findById(userId).select("name avatar").lean();
         }
-      });
-//     let messages = await Message.find({ chat: id });
-//     let chat = await Chat.findById(id).populate("latestMessage");
+        return user;
+      })
+    );
+    chat.users = populatedUsers;
 
-//     const populatedUsers = await Promise.all(
-//       chat.users.map(async (userId) => {
-//         let user = await User.findById(userId).select("name avatar").lean();
-//         if (!user) {
-//           user = await Shipper.findById(userId).select("name avatar").lean();
-//         }
-//         return user;
-//       })
-//     );
+    // Populate sender trong messages
+    const populatedMessages = await Promise.all(
+      messages.map(async (msg) => {
+        let sender = await User.findById(msg.sender).select("name avatar").lean();
+        if (!sender) {
+          sender = await Shipper.findById(msg.sender).select("name avatar").lean();
+        }
+        return {
+          ...msg,
+          sender,
+        };
+      })
+    );
 
-//     chat = {
-//       ...chat.toObject(),
-//       users: populatedUsers,
-//     }
-
-    if (!messages) next(createError(404, "Message not found!"));
-
-    res.json({ chat, messages });
+    res.json({ chat, messages: populatedMessages });
   } catch (error) {
     next(error);
   }
