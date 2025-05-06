@@ -1,6 +1,7 @@
 const createError = require("../utils/createError");
 const jwt = require("jsonwebtoken");
 const Employee = require("../services/employee/employee.model");
+const User = require("../services/user/user.model")
 
 // Middleware kiểm tra token
 const verifyToken = (req, res, next) => {
@@ -32,5 +33,22 @@ const authorize = (roles) => {
   };
 };
 
+const authorizeStoreStaff = (roles) => {
+  return async (req, res, next) => {
+    try {
+      const user = await User.findById(req.user.id)
+      if (!user || !user.role.some(role => roles.includes(role))) {
+        return next(createError(403, `Bạn không có quyền thực hiện hành động này. Quyền hiện tại: ${user?.role}`));
+      }
+      next();
+    }
+    catch (error) {
+      next(error)
+    }
+  }
+}
 
-module.exports = { verifyToken, authorize };
+
+
+
+module.exports = { verifyToken, authorize, authorizeStoreStaff };
