@@ -57,7 +57,6 @@ const sendMessage = asyncHandler(async (req, res, next) => {
 
     // Populate sender and chat info for response
     message = await message.populate("sender", "name avatar");
-    message = await message.populate("chat");
     message = await User.populate(message, {
       path: "chat.users",
       select: "name avatar",
