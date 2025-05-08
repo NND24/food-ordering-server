@@ -184,16 +184,20 @@ io.on("connection", (socket) => {
       }
       console.log("Chat found:", chat);
 
-      const storeId = chat.store.toString();
+      if (chat.store) {
+        const storeId = chat.store.toString();
 
-      // Emit message to user(s) in that chat room
-      io.to(chatId).emit("messageReceived", newMessageReceived);
+        // Emit message to user(s) in that chat room
+        io.to(chatId).emit("messageReceived", newMessageReceived);
 
-      // Emit notification to the store room
-      if (storeId) {
-        console.log("Store ID found:", storeId);
-        io.to(`store:${storeId}`).emit("storeNewMessage", newMessageReceived);
+        // Emit notification to the store room
+        if (storeId) {
+          console.log("Store ID found:", storeId);
+          io.to(`store:${storeId}`).emit("storeNewMessage", newMessageReceived);
+        }
       }
+
+      io.to(chatId).emit("messageReceived", newMessageReceived);
     } catch (error) {
       console.error("Error in sendMessage:", error);
     }
