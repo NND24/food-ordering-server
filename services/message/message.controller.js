@@ -10,10 +10,21 @@ const sendMessage = asyncHandler(async (req, res, next) => {
   const { id } = req.params; // Chat ID from request parameters
 
   // Fetch chat by ID and populate related store and users
-  const chat = await Chat.findById(id).populate("store users");
+  const chat = await Chat.findById(id).populate("store").lean();
 
   // If chat not found, return 404 error
   if (!chat) return next(createError(404, "Chat not found"));
+
+  const populatedUsers = await Promise.all(
+    chat.users.map(async (userId) => {
+      let user = await User.findById(userId).select("name avatar").lean();
+      if (!user) {
+        user = await Shipper.findById(userId).select("name avatar").lean();
+      }
+      return user;
+    })
+  );
+  chat.users = populatedUsers;
 
   // Find the requesting user from the database
   const requestUser = await User.findById(req.user._id);
@@ -29,6 +40,7 @@ const sendMessage = asyncHandler(async (req, res, next) => {
     $or: [{ staff: requestUser._id }, { owner: requestUser._id }],
   });
 
+  let isStoreChat = false;
   // If the chat has a store and user is staff, verify store match
   if (chat.store && isStaff) {
     if (userStoreBelong._id.toString() === chat.store._id.toString()) {
