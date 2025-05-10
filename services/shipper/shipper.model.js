@@ -33,6 +33,11 @@ var shipperSchema = new mongoose.Schema(
       enum: ["female", "male", "other"],
       default: "other",
     },
+    role: {
+      type: [String],
+      enum: ["user", "manager", "admin", "shipper", "staff", "owner"],
+      default: ["shipper"],
+    },
     avatar: {
       filePath: { type: String, required: false },
       url: {
