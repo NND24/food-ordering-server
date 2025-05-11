@@ -2,22 +2,23 @@
   "name": "food-ordering-server",
   "version": "1.0.0",
   "main": "server.js",
-  "scripts": {
-    "build": "docker-compose build",
-    "up": "docker-compose --env-file .env up -d",
-    "down": "docker-compose down",
-    "logs": "docker-compose logs -f",
-    "clean": "docker-compose down --volumes --remove-orphans",
-    "restart": "npm run down && npm run build && npm run up",
-    "health": "curl -s http://localhost:5000/health | jq .",
-    "ps": "docker-compose ps",
-    "shell": "docker-compose exec $(SERVICE) sh",
-    "prune": "docker system prune -f && docker volume prune -f"
-  },
+"scripts": {
+  "build": "docker-compose --env-file .env build",
+  "up": "docker-compose --env-file .env up -d",
+  "down": "docker-compose --env-file .env down",
+  "logs": "docker-compose --env-file .env logs -f",
+  "clean": "docker-compose --env-file .env down --volumes --remove-orphans",
+  "restart": "npm run down && npm run build && npm run up",
+  "health": "curl -s http://localhost:${GATEWAY_PORT:-5000}/health | jq .",
+  "ps": "docker-compose --env-file .env ps",
+  "shell": "docker-compose --env-file .env exec $(SERVICE) sh",
+  "prune": "docker system prune -f && docker volume prune -f"
+},
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "raw-body": "3.0.0",
     "axios": "^1.7.9",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.3",
@@ -43,7 +44,8 @@
     "sharp": "^0.33.5",
     "socket.io": "^4.8.1",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "http-proxy-middleware": "3.0.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"

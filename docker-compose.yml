@@ -1,0 +1,408 @@
+services:
+  # Define each service dynamically
+  auth:
+    build:
+      context: ./service/auth
+    ports:
+      - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${AUTH_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${AUTH_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  cart:
+    build:
+      context: ./service/cart
+    ports:
+      - "${CART_SERVICE_PORT}:${CART_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${CART_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${CART_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  category:
+    build:
+      context: ./service/category
+    ports:
+      - "${CATEGORY_SERVICE_PORT}:${CATEGORY_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${CATEGORY_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${CATEGORY_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    
+
+  chat:
+    build:
+      context: ./service/chat
+    ports:
+      - "${CHAT_SERVICE_PORT}:${CHAT_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${CHAT_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${CHAT_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  dish:
+    build:
+      context: ./service/dish
+    ports:
+      - "${DISH_SERVICE_PORT}:${DISH_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${DISH_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${DISH_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  employee:
+    build:
+      context: ./service/employee
+    ports:
+      - "${EMPLOYEE_SERVICE_PORT}:${EMPLOYEE_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${EMPLOYEE_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${EMPLOYEE_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  favorite:
+    build:
+      context: ./service/favorite
+    ports:
+      - "${FAVORITE_SERVICE_PORT}:${FAVORITE_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${FAVORITE_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${FAVORITE_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  foodtype:
+    build:
+      context: ./service/foodType
+    ports:
+      - "${FOODTYPE_SERVICE_PORT}:${FOODTYPE_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${FOODTYPE_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${FOODTYPE_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  location:
+    build:
+      context: ./service/location
+    ports:
+      - "${LOCATION_SERVICE_PORT}:${LOCATION_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${LOCATION_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${LOCATION_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  message:
+    build:
+      context: ./service/message
+    ports:
+      - "${MESSAGE_SERVICE_PORT}:${MESSAGE_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${MESSAGE_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${MESSAGE_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  notification:
+    build:
+      context: ./service/notification
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT}:${NOTIFICATION_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${NOTIFICATION_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${NOTIFICATION_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  order:
+    build:
+      context: ./service/order
+    ports:
+      - "${ORDER_SERVICE_PORT}:${ORDER_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${ORDER_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${ORDER_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  shipper:
+    build:
+      context: ./service/shipper
+    ports:
+      - "${SHIPPER_SERVICE_PORT}:${SHIPPER_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${SHIPPER_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${SHIPPER_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+  store:
+    build:
+      context: ./service/store
+    ports:
+      - "${STORE_SERVICE_PORT}:${STORE_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${STORE_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${STORE_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  topping:
+    build:
+      context: ./service/topping
+    ports:
+      - "${TOPPING_SERVICE_PORT}:${TOPPING_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${TOPPING_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${TOPPING_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+  upload:
+    build:
+      context: ./service/upload
+    ports:
+      - "${UPLOAD_SERVICE_PORT}:${UPLOAD_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${UPLOAD_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${UPLOAD_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  user:
+    build:
+      context: ./service/user
+    ports:
+      - "${USER_SERVICE_PORT}:${USER_SERVICE_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${USER_SERVICE_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${USER_SERVICE_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Socket
+  ws:
+    build:
+      context: ./service/ws
+    ports:
+      - "${WEBSOCKET_PORT}:${WEBSOCKET_PORT}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${WEBSOCKET_PORT}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+
+  # Gateway
+  api-gateway:
+    build:
+      context: ./service/api-gateway
+    ports:
+      - "${GATEWAY_PORT:-5000}:${GATEWAY_PORT:-5000}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${GATEWAY_PORT:-5000}
+    volumes:
+      - ./shared:/usr/src/app/shared
+    networks:
+      - soa_network
+    depends_on:
+      auth:
+        condition: service_healthy
+      cart:
+        condition: service_healthy
+      category:
+        condition: service_healthy
+      chat:
+        condition: service_healthy
+      dish:
+        condition: service_healthy
+      employee:
+        condition: service_healthy
+      favorite:
+        condition: service_healthy
+      foodtype:
+        condition: service_healthy
+      location:
+        condition: service_healthy
+      message:
+        condition: service_healthy
+      notification:
+        condition: service_healthy
+      order:
+        condition: service_healthy
+      shipper:
+        condition: service_healthy
+      store:
+        condition: service_healthy
+      topping:
+        condition: service_healthy
+      upload:
+        condition: service_healthy
+      user:
+        condition: service_healthy
+networks:
+  soa_network:
+    driver: bridge
