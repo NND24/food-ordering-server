@@ -11,10 +11,12 @@ services:
       - PORT=${AUTH_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/auth:/usr/src/app
+      - auth_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${AUTH_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${AUTH_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -31,10 +33,12 @@ services:
       - PORT=${CART_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/cart:/usr/src/app
+      - cart_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${CART_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${CART_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -51,15 +55,16 @@ services:
       - PORT=${CATEGORY_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/category:/usr/src/app
+      - cartegory_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${CATEGORY_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${CATEGORY_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-    
 
   chat:
     build:
@@ -72,10 +77,12 @@ services:
       - PORT=${CHAT_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/chat:/usr/src/app
+      - chat_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${CHAT_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${CHAT_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -92,10 +99,12 @@ services:
       - PORT=${DISH_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/dish:/usr/src/app
+      - dish_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${DISH_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${DISH_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -112,10 +121,12 @@ services:
       - PORT=${EMPLOYEE_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/employee:/usr/src/app
+      - employee_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${EMPLOYEE_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${EMPLOYEE_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -132,10 +143,12 @@ services:
       - PORT=${FAVORITE_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/favorite:/usr/src/app
+      - favorite_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${FAVORITE_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${FAVORITE_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -152,10 +165,12 @@ services:
       - PORT=${FOODTYPE_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/foodType:/usr/src/app
+      - foodType_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${FOODTYPE_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${FOODTYPE_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -172,10 +187,12 @@ services:
       - PORT=${LOCATION_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/location:/usr/src/app
+      - location_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${LOCATION_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${LOCATION_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -192,10 +209,12 @@ services:
       - PORT=${MESSAGE_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/message:/usr/src/app
+      - message_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${MESSAGE_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${MESSAGE_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -212,10 +231,12 @@ services:
       - PORT=${NOTIFICATION_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/notification:/usr/src/app
+      - notification_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${NOTIFICATION_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${NOTIFICATION_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -232,10 +253,12 @@ services:
       - PORT=${ORDER_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/order:/usr/src/app
+      - order_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${ORDER_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${ORDER_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -252,14 +275,17 @@ services:
       - PORT=${SHIPPER_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/shipper:/usr/src/app
+      - shipper_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${SHIPPER_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${SHIPPER_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+
   store:
     build:
       context: ./service/store
@@ -271,10 +297,12 @@ services:
       - PORT=${STORE_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/store:/usr/src/app
+      - store_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${STORE_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${STORE_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -291,14 +319,17 @@ services:
       - PORT=${TOPPING_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/topping:/usr/src/app
+      - topping_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${TOPPING_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${TOPPING_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+
   upload:
     build:
       context: ./service/upload
@@ -310,10 +341,12 @@ services:
       - PORT=${UPLOAD_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/upload:/usr/src/app
+      - upload_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${UPLOAD_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${UPLOAD_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -330,10 +363,12 @@ services:
       - PORT=${USER_SERVICE_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/user:/usr/src/app
+      - user_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${USER_SERVICE_PORT}/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${USER_SERVICE_PORT}/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -351,6 +386,8 @@ services:
       - PORT=${WEBSOCKET_PORT}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/ws:/usr/src/app
+      - ws_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
 
@@ -406,3 +443,22 @@ services:
 networks:
   soa_network:
     driver: bridge
+volumes:
+  auth_node_modules:
+  cart_node_modules:
+  cartegory_node_modules:
+  chat_node_modules:
+  dish_node_modules:
+  employee_node_modules:
+  favorite_node_modules:
+  foodType_node_modules:
+  location_node_modules:
+  message_node_modules:
+  notification_node_modules:
+  order_node_modules:
+  shipper_node_modules:
+  store_node_modules:
+  topping_node_modules:
+  upload_node_modules:
+  user_node_modules:
+  ws_node_modules:

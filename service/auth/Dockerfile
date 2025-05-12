@@ -1,24 +1,27 @@
 # Use a lightweight Node.js image
 FROM node:20-alpine
 
-# Install curl for healthcheck
+# Install necessary tools
 RUN apk add --no-cache curl
 
 # Set the working directory
 WORKDIR /usr/src/app
 
-# Copy and install only the necessary dependencies
+# Copy package files for dependency installation
 COPY package*.json ./
+
+# Install both production and dev dependencies
 RUN npm install --production
 
-# Copy the rest of the application code
-COPY . .
+# Install nodemon globally for development
+RUN npm install -g nodemon
 
-# Use the environment variable for the port
+# Mount volumes for live code reloading
+VOLUME [ "/usr/src/app/shared", "/usr/src/app" ]
+
+# Expose the application port
 EXPOSE ${PORT}
 
-# Mount shared code from the host (useful for development)
-VOLUME /usr/src/app/shared
 
-# Start the server
-CMD ["node", "server.js"]
+# Start the server in watch mode
+CMD ["nodemon", "--watch", ".", "--legacy-watch", "--exec", "node", "server.js"]
