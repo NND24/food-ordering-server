@@ -1,13 +1,13 @@
 const express = require("express");
-const authMiddleware = require("../middlewares/authMiddleware");
+const authMiddleware = require("../../middlewares/authMiddleware");
 const {
   getAllStoreRating,
   getDetailRating,
   addStoreRating,
   editStoreRating,
   deleteStoreRating,
-} = require("../controllers/rating.controller");
-const validateMongoDbId = require("../middlewares/validateMongoDBId");
+} = require("./rating.controller");
+const validateMongoDbId = require("../../middlewares/validateMongoDBId");
 
 const router = express.Router();
 

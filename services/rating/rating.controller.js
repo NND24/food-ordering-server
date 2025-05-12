@@ -1,7 +1,7 @@
-const { Rating } = require("../services/store/store.model");
-const createError = require("../utils/createError");
+const { Rating } = require("../store/store.model");
+const createError = require("../../utils/createError");
 const asyncHandler = require("express-async-handler");
-const { getPaginatedData } = require("../utils/paging");
+const { getPaginatedData } = require("../../utils/paging");
 
 const getAllStoreRating = asyncHandler(async (req, res, next) => {
   try {
