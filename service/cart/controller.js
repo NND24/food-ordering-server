@@ -1,20 +1,18 @@
+const FoodType = require("./shared/model/foodType");
+const Store = require("./shared/model/store");
 const Cart = require("./shared/model/cart");
-const Dish = require("./shared/model/dish")
-const ToppingGroup = require("./shared/model/toppingGroup")
-const Rating = require("./shared/model/rating")
+const Dish = require("./shared/model/dish");
+const ToppingGroup = require("./shared/model/toppingGroup");
+const Topping = require("./shared/model/topping");
+const Rating = require("./shared/model/rating");
 const Notification = require("./shared/model/notification");
 const Order = require("./shared/model/order");
-const Store = require("./shared/model/store");
-
 const { getSocketIo, getUserSockets } = require("./shared/utils/socketManager");
 const createError = require("./shared/utils/createError");
 
 const asyncHandler = require("express-async-handler");
 const { query } = require("express");
 const mongoose = require("mongoose");
-
-
-
 
 // [GET] /#
 const getUserCart = async (req, res) => {
@@ -579,7 +577,7 @@ const completeCart = async (req, res) => {
     await Cart.findOneAndDelete({ user: userId });
 
     const store = await Store.findById(storeId);
-    const userIds = [store.owner.toString(), ...(store.staff || []).map(s => s.toString())];
+    const userIds = [store.owner.toString(), ...(store.staff || []).map((s) => s.toString())];
 
     // Create and save the notification
     const newNotification = new Notification({
@@ -599,21 +597,17 @@ const completeCart = async (req, res) => {
       newNotification,
       newOrder,
     };
-   
 
     return res.status(201).json({
       success: true,
       message: "Order placed successfully",
       order: newOrder,
     });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
-
 
 const reOrder = async (req, res) => {
   try {

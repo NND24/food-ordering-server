@@ -1,6 +1,7 @@
-const Favorite  = require("./shared/model/favorite");
-const Store = require("./shared/model/store")
-const Rating = require("./shared/model/rating")
+const FoodType = require("./shared/model/foodType");
+const Store = require("./shared/model/store");
+const Rating = require("./shared/model/rating");
+const Favorite = require("./shared/model/favorite");
 
 const createError = require("./shared/utils/createError");
 

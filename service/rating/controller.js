@@ -1,4 +1,6 @@
-const { Rating } = require("./shared/model/rating");
+const Store = require("./shared/model/store");
+const Dish = require("./shared/model/dish");
+const Rating = require("./shared/model/rating");
 const asyncHandler = require("express-async-handler");
 const createError = require("./shared/utils/createError");
 const { getPaginatedData } = require("./shared/utils/paging");

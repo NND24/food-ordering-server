@@ -1,3 +1,6 @@
+const Category = require("./shared/model/category");
+const Store = require("./shared/model/store");
+const ToppingGroup = require("./shared/model/toppingGroup");
 const Dish = require("./shared/model/dish");
 
 const { getPaginatedData } = require("./shared/utils/paging");
@@ -104,9 +107,7 @@ const createDish = async (req, res) => {
     const dishData = req.body; // Get dish details from request body
     // Ensure required fields exist
     if (!dishData.name || !dishData.price) {
-      return res
-        .status(400)
-        .json({ message: "Dish name and price are required" });
+      return res.status(400).json({ message: "Dish name and price are required" });
     }
 
     Object.keys(dishData).forEach((key) => {
@@ -172,9 +173,9 @@ const deleteDish = async (req, res) => {
 };
 
 module.exports = {
-    getAllDish,
-    updateDish,
-    createDish,
-    deleteDish,
-    getDish
-}
+  getAllDish,
+  updateDish,
+  createDish,
+  deleteDish,
+  getDish,
+};

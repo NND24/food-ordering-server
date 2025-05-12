@@ -1,3 +1,6 @@
+const Store = require("./shared/model/store");
+const Topping = require("./shared/model/topping");
+const Dish = require("./shared/model/dish");
 const Order = require("./shared/model/order");
 const createError = require("./shared/utils/createError");
 const asyncHandler = require("express-async-handler");
@@ -72,42 +75,40 @@ const getOrderDetail = asyncHandler(async (req, res, next) => {
   });
 });
 
-const getOrderDetailForDirectionShipper = asyncHandler(
-  async (req, res, next) => {
-    const { orderId } = req.params;
+const getOrderDetailForDirectionShipper = asyncHandler(async (req, res, next) => {
+  const { orderId } = req.params;
 
-    if (!orderId) {
-      next(
-        createError(400, {
-          success: false,
-          message: "orderId not found",
-        })
-      );
-    }
-
-    const orderDetail = await Order.findById(orderId)
-      .populate({
-        path: "store",
+  if (!orderId) {
+    next(
+      createError(400, {
+        success: false,
+        message: "orderId not found",
       })
-      .populate("items.dish")
-      .populate("items.toppings")
-      .populate({ path: "user" });
-
-    if (!orderDetail || orderDetail.length === 0) {
-      next(
-        createError(404, {
-          success: false,
-          message: "Order not found",
-        })
-      );
-    }
-
-    res.status(200).json({
-      success: true,
-      data: orderDetail,
-    });
+    );
   }
-);
+
+  const orderDetail = await Order.findById(orderId)
+    .populate({
+      path: "store",
+    })
+    .populate("items.dish")
+    .populate("items.toppings")
+    .populate({ path: "user" });
+
+  if (!orderDetail || orderDetail.length === 0) {
+    next(
+      createError(404, {
+        success: false,
+        message: "Order not found",
+      })
+    );
+  }
+
+  res.status(200).json({
+    success: true,
+    data: orderDetail,
+  });
+});
 
 const getFinishedOrders = asyncHandler(async (req, res, next) => {
   try {
@@ -305,9 +306,7 @@ const getDeliveredOrders = asyncHandler(async (req, res, next) => {
   const shipperId = req?.user?._id;
 
   if (!shipperId) {
-    return next(
-      createError(400, { success: false, message: "Shipper not found" })
-    );
+    return next(createError(400, { success: false, message: "Shipper not found" }));
   }
 
   try {
@@ -367,10 +366,7 @@ const getShipperOrders = asyncHandler(async (req, res, next) => {
 
     const ordersThisMonth = allOrders.filter((order) => {
       const orderDate = new Date(order.createdAt);
-      return (
-        orderDate.getMonth() + 1 === currentMonth &&
-        orderDate.getFullYear() === currentYear
-      );
+      return orderDate.getMonth() + 1 === currentMonth && orderDate.getFullYear() === currentYear;
     });
 
     res.status(200).json({
@@ -459,9 +455,7 @@ const getAllOrder = async (req, res) => {
     const { store_id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(store_id)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid store_id format" });
+      return res.status(400).json({ success: false, message: "Invalid store_id format" });
     }
 
     let filterOptions = { store: store_id };
@@ -474,10 +468,7 @@ const getAllOrder = async (req, res) => {
     // Add search filter if name query is present
     if (name && name.trim() !== "") {
       const regex = new RegExp(name, "i"); // Case-insensitive search
-      filterOptions.$or = [
-        { customerName: regex },
-        { customerPhonenumber: regex },
-      ];
+      filterOptions.$or = [{ customerName: regex }, { customerPhonenumber: regex }];
     }
 
     const response = await getPaginatedData(
@@ -499,9 +490,7 @@ const getAllOrder = async (req, res) => {
       const regex = new RegExp(name, "i");
       response.data = response.data.filter(
         (order) =>
-          order.user?.name?.match(regex) ||
-          order.customerName?.match(regex) ||
-          order.customerPhonenumber?.match(regex)
+          order.user?.name?.match(regex) || order.customerName?.match(regex) || order.customerPhonenumber?.match(regex)
       );
     }
 
@@ -557,5 +546,5 @@ module.exports = {
   cancelOrder,
   getOrderDetailForDirectionShipper,
   getAllOrder,
-  updateOrder
+  updateOrder,
 };
