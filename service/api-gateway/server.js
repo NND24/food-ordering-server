@@ -28,6 +28,8 @@ const services = {
   topping: process.env.TOPPING_SERVICE_PORT || 5015,
   upload: process.env.UPLOAD_SERVICE_PORT || 5016,
   user: process.env.USER_SERVICE_PORT || 5017,
+  rating: process.env.RATING_SERVICE_PORT || 5018,
+  customerStore: process.env.CUSTOMER_STORE_SERVICE_PORT || 5019,
 };
 
 // Parse ALLOWED_ORIGINS from .env and split by commas
@@ -58,7 +60,7 @@ app.use("/api/v1/:service/*", async (req, res) => {
   try {
     const url = `http://${serviceName}:${servicePort}${req.originalUrl.replace(`/api/v1/${serviceName}`, "")}`;
     console.log(`[${new Date().toISOString()}] Forwarding request to ${url}`);
-    
+
     // Use raw-body for consistent body parsing
     const rawBody = await getRawBody(req, {
       length: req.headers["content-length"] || undefined,
@@ -84,7 +86,6 @@ app.use("/api/v1/:service/*", async (req, res) => {
     }
 
     res.status(response.status).send(response.data);
-    
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error forwarding request to ${serviceName}:`, error.message);
 

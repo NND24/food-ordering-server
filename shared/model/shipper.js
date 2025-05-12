@@ -33,13 +33,17 @@ var shipperSchema = new mongoose.Schema(
       enum: ["female", "male", "other"],
       default: "other",
     },
+    role: {
+      type: [String],
+      enum: ["user", "manager", "admin", "shipper", "staff", "owner"],
+      default: ["shipper"],
+    },
     avatar: {
       filePath: { type: String, required: false },
       url: {
         type: String,
         required: true,
-        default:
-          "https://res.cloudinary.com/datnguyen240/image/upload/v1722168751/avatars/avatar_pnncdk.png",
+        default: "https://res.cloudinary.com/datnguyen240/image/upload/v1722168751/avatars/avatar_pnncdk.png",
       },
       createdAt: { type: Date, default: Date.now },
     },

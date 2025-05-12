@@ -2,7 +2,7 @@ const Message = require("./shared/model/message");
 const User = require("./shared/model/user");
 const Shipper = require("./shared/model/shipper");
 const Chat = require("./shared/model/chat");
-const Store  = require("./shared/model/store");
+const Store = require("./shared/model/store");
 
 const createError = require("./shared/utils/createError");
 
@@ -12,13 +12,28 @@ const sendMessage = asyncHandler(async (req, res, next) => {
   const { id } = req.params; // Chat ID from request parameters
 
   // Fetch chat by ID and populate related store and users
-  const chat = await Chat.findById(id).populate("store users");
+  const chat = await Chat.findById(id).populate("store").lean();
 
   // If chat not found, return 404 error
   if (!chat) return next(createError(404, "Chat not found"));
 
+  const populatedUsers = await Promise.all(
+    chat.users.map(async (userId) => {
+      let user = await User.findById(userId).select("name avatar").lean();
+      if (!user) {
+        user = await Shipper.findById(userId).select("name avatar").lean();
+      }
+      return user;
+    })
+  );
+  chat.users = populatedUsers;
+
   // Find the requesting user from the database
-  const requestUser = await User.findById(req.user._id);
+  let requestUser = await User.findById(req.user._id);
+  if (!requestUser) {
+    requestUser = await Shipper.findById(req.user._id);
+  }
+  console.log("request user: ", requestUser);
 
   // Check if the user's role includes staff-type roles
   const isStaff = requestUser.role.some((role) => ["owner", "manager", "staff"].includes(role));
@@ -31,6 +46,7 @@ const sendMessage = asyncHandler(async (req, res, next) => {
     $or: [{ staff: requestUser._id }, { owner: requestUser._id }],
   });
 
+  let isStoreChat = false;
   // If the chat has a store and user is staff, verify store match
   if (chat.store && isStaff) {
     if (userStoreBelong._id.toString() === chat.store._id.toString()) {
@@ -48,6 +64,7 @@ const sendMessage = asyncHandler(async (req, res, next) => {
   // Prepare new message object with appropriate sender based on role
   const newMessage = {
     sender: isStoreChat ? chat.store.owner : req.user._id,
+    senderModel: isStoreChat ? "User" : requestUser.role.includes("shipper") ? "Shipper" : "User", // 👈 chính là chỗ bạn quên
     content: req.body?.content,
     image: req.body?.image,
     chat: id,
@@ -59,6 +76,7 @@ const sendMessage = asyncHandler(async (req, res, next) => {
 
     // Populate sender and chat info for response
     message = await message.populate("sender", "name avatar");
+    // message = await message.populate("chat");
     message = await User.populate(message, {
       path: "chat.users",
       select: "name avatar",
@@ -72,6 +90,7 @@ const sendMessage = asyncHandler(async (req, res, next) => {
       success: true,
       data: message,
     });
+    console.log("message ", message);
   } catch (error) {
     // Forward any errors to the error handler
     next(error);

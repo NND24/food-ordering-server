@@ -2,7 +2,7 @@ const User = require("./shared/model/user");
 const Shipper = require("./shared/model/shipper");
 const Chat = require("./shared/model/chat");
 const Message = require("./shared/model/message");
-const Store  = require("./shared/model/store");
+const Store = require("./shared/model/store");
 
 const createError = require("./shared/utils/createError");
 
@@ -20,25 +20,11 @@ const createChat = asyncHandler(async (req, res, next) => {
     // Tìm cuộc trò chuyện giữa 2 user
     let isChat = await Chat.findOne({
       users: { $all: [req.user._id, id] },
-    }).populate("latestMessage");
+    });
 
     if (isChat) {
-      const populatedUsers = await Promise.all(
-        isChat.users.map(async (userId) => {
-          let user = await User.findById(userId).select("name avatar").lean();
-          if (!user) {
-            user = await Shipper.findById(userId).select("name avatar").lean();
-          }
-          return user;
-        })
-      );
-
-      return res.json({
-        ...isChat.toObject(),
-        users: populatedUsers,
-      });
+      return res.json(isChat._id);
     }
-
     // Nếu không có chat, tạo mới
     let chatData = {};
     if (storeId) {
@@ -55,22 +41,8 @@ const createChat = asyncHandler(async (req, res, next) => {
     }
 
     const createdChat = await Chat.create(chatData);
-    const fullChat = await Chat.findById(createdChat._id).populate("latestMessage");
 
-    const populatedUsers = await Promise.all(
-      fullChat.users.map(async (userId) => {
-        let user = await User.findById(userId).select("name avatar").lean();
-        if (!user) {
-          user = await Shipper.findById(userId).select("name avatar").lean();
-        }
-        return user;
-      })
-    );
-
-    res.status(200).json({
-      ...fullChat.toObject(),
-      users: populatedUsers,
-    });
+    res.status(200).json(createdChat._id);
   } catch (error) {
     next(error);
   }
@@ -98,10 +70,14 @@ const createChat = asyncHandler(async (req, res, next) => {
 const getAllChats = asyncHandler(async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const userRoles = req.user.role;
+    const userRoles = req.user.role || []; // Nếu không có role, gán mặc định là mảng rỗng
+
+    console.log("User ID:", userId);
+    console.log("User Roles:", userRoles);
 
     let chatQuery = [{ users: userId }];
 
+    // Kiểm tra nếu userRoles có staff hoặc manager
     if (userRoles.includes("staff") || userRoles.includes("manager")) {
       const stores = await Store.find({ staff: userId }).select("owner");
 
@@ -110,7 +86,9 @@ const getAllChats = asyncHandler(async (req, res, next) => {
       if (ownerIds.length > 0) {
         chatQuery.push({ users: { $in: ownerIds } });
       }
-    } else if (userRoles.includes("storeOwner")) {
+    }
+    // Kiểm tra nếu userRoles có storeOwner
+    else if (userRoles.includes("storeOwner")) {
       const store = await Store.findOne({ owner: userId }).select("_id");
 
       if (store) {
@@ -118,6 +96,7 @@ const getAllChats = asyncHandler(async (req, res, next) => {
       }
     }
 
+    // Tìm tất cả các cuộc trò chuyện phù hợp với điều kiện
     let chats = await Chat.find({
       $or: chatQuery,
     })
@@ -125,6 +104,7 @@ const getAllChats = asyncHandler(async (req, res, next) => {
       .populate("latestMessage")
       .sort({ updatedAt: -1 });
 
+    // Populating thông tin người dùng và người gửi trong các cuộc trò chuyện
     chats = await Promise.all(
       chats.map(async (chat) => {
         const populatedUsers = await Promise.all(
