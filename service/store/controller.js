@@ -1,6 +1,11 @@
+const Category = require("./shared/model/category");
+const FoodType = require("./shared/model/foodType");
+const ToppingGroup = require("./shared/model/toppingGroup");
+const Topping = require("./shared/model/topping");
 const Store = require("./shared/model/store");
 const Rating = require("./shared/model/rating");
-const User = require("./shared/model/user");
+const Dish = require("./shared/model/dish");
+const Order = require("./shared/model/order");
 
 const createError = require("./shared/utils/createError");
 const asyncHandler = require("express-async-handler");
