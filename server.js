@@ -24,7 +24,7 @@ const employeeRoute = require("./services/employee/employee.routes");
 const cartRoute = require("./services/cart/cart.routes");
 const favoriteRoute = require("./services/favorite/favorite.routes");
 const orderRoute = require("./services/order/order.routes");
-const ratingRoute = require("./routes/rating.route");
+const ratingRoute = require("./services/rating/rating.route");
 const customerStoreRoute = require("./services/customer/store/store.routes");
 const Chat = require("./services/chat/chat.model");
 const { setSocketIo, getUserSockets } = require("./utils/socketManager");
@@ -90,8 +90,7 @@ app.use("/api/v1/cart", cartRoute);
 app.use("/api/v1/favorite", favoriteRoute);
 app.use("/api/v1/order", orderRoute);
 app.use("/api/v1/rating", ratingRoute);
-
-app.use("/api/v1/customer/store", customerStoreRoute);
+app.use("/api/v1/customerStore", customerStoreRoute);
 
 app.use(errorHandler);
 
