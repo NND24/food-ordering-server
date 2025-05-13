@@ -1,9 +1,11 @@
-const Store = require("./shared/model/store")
-const Dish = require("./shared/model/dish")
-const Category = require("./shared/model/category")
+const FoodType = require("./shared/model/foodType");
+const ToppingGroup = require("./shared/model/toppingGroup");
+const Topping = require("./shared/model/topping");
+const Store = require("./shared/model/store");
+const Dish = require("./shared/model/dish");
+const Category = require("./shared/model/category");
 
 const { getPaginatedData } = require("./shared/utils/paging");
-
 
 const getAllCategory = async (req, res) => {
   try {
@@ -12,13 +14,7 @@ const getAllCategory = async (req, res) => {
     if (name) {
       filterOptions.name = { $regex: name, $options: "i" };
     }
-    const response = await getPaginatedData(
-      Category,
-      filterOptions,
-      null,
-      limit,
-      page
-    );
+    const response = await getPaginatedData(Category, filterOptions, null, limit, page);
     res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -80,9 +76,7 @@ const createCategory = async (req, res) => {
     // Save to database
     const savedCategory = await newCategory.save();
 
-    res
-      .status(201)
-      .json({ message: "Category created", category: savedCategory });
+    res.status(201).json({ message: "Category created", category: savedCategory });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -109,9 +103,7 @@ const updateCategory = async (req, res) => {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    res
-      .status(200)
-      .json({ message: "Category updated", category: updatedCategory });
+    res.status(200).json({ message: "Category updated", category: updatedCategory });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }

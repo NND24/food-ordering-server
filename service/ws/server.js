@@ -9,7 +9,15 @@ const http = require("http");
 const socketIo = require("socket.io");
 const morgan = require("morgan");
 const Notification = require("./shared/model/notification");
-const { setSocketIo, getUserSockets, registerUserSocket, unregisterUserSocket, registerStoreSocket, unregisterStoreSocket } = require("./shared/utils/socketManager");
+const Chat = require("./shared/model/chat");
+const {
+  setSocketIo,
+  getUserSockets,
+  registerUserSocket,
+  unregisterUserSocket,
+  registerStoreSocket,
+  unregisterStoreSocket,
+} = require("./shared/utils/socketManager");
 
 const app = express();
 connectDB();
@@ -35,53 +43,127 @@ const server = http.createServer(app);
 const io = socketIo(server, { cors: { origin: "*" } });
 
 setSocketIo(io);
+const userSockets = getUserSockets();
 
 // Connection management
 io.on("connection", (socket) => {
-  console.log(`New socket connected: ${socket.id}`);
-
   socket.on("registerUser", async (userId) => {
-    try {
-      registerUserSocket(userId, socket.id);
-      console.log(`User ${userId} registered with socket ID: ${socket.id}`);
+    // Nếu userId chưa có trong userSockets, tạo mảng mới
+    if (!userSockets[userId]) {
+      userSockets[userId] = [];
+    }
 
-      const notifications = await Notification.find({ userId }).sort({ createdAt: -1 });
-      socket.emit("getAllNotifications", notifications);
+    // Thêm socket id vào mảng của user
+    userSockets[userId].push(socket.id);
+
+    console.log(`User ${userId} connected with socket ID: ${socket.id}`);
+
+    // Khi user kết nối, lấy tất cả thông báo của họ
+    try {
+      const allNotifications = await Notification.find({ userId }).sort({ createdAt: -1 });
+      socket.emit("getAllNotifications", allNotifications); // Gửi về client
     } catch (error) {
-      console.error("Error registering user:", error);
+      console.error("Lỗi lấy thông báo:", error);
     }
   });
 
-  // Listen for "newOrderNotification" and emit to the appropriate users
-  socket.on("newOrderNotification", async (data) => {
+  // Gửi thông báo đến tất cả các thiết bị của một user
+  socket.on("sendNotification", async ({ userId, title, message, type }) => {
     try {
-      const { userIds, newNotification, newOrder } = data;
+      const newNotification = new Notification({ userId, title, message, type });
+      await newNotification.save();
 
-      const userSockets = getUserSockets();
-      userIds.forEach(uid => {
-        const socketId = userSockets[uid];
-        if (socketId) {
-          io.to(socketId).emit("newOrderNotification", {
-            notification: newNotification,
-            orderId: newOrder._id,
-          });
-          console.log("✅ Notification sent to user:", uid);
-        } else {
-          console.log("⚠️ User not connected or no socket found for user:", uid);
+      // Gửi thông báo đến tất cả các socket ids của userId
+      if (userSockets[userId]) {
+        userSockets[userId].forEach((socketId) => {
+          io.to(socketId).emit("newNotification", newNotification);
+        });
+      }
+    } catch (error) {
+      console.error("Lỗi gửi thông báo:", error);
+    }
+  });
+
+  // Handle send location
+  socket.on("joinOrder", (orderId) => {
+    socket.join(orderId);
+    console.log(`User joined order: ${orderId}`);
+  });
+
+  socket.on("leaveOrder", (orderId) => {
+    socket.leave(orderId);
+    console.log(`User left order: ${orderId}`);
+  });
+
+  socket.on("sendLocation", (locationData) => {
+    console.log("Shipper location:", locationData.data);
+    io.to(locationData.id).emit("updateLocation", locationData.data);
+  });
+
+  // Handle message
+  socket.on("joinChat", (chatId) => {
+    socket.join(chatId);
+    console.log(`User joined room: ${chatId}`);
+  });
+
+  socket.on("leaveChat", (chatId) => {
+    socket.leave(chatId);
+    console.log(`User left room: ${chatId}`);
+  });
+
+  // socket.on("sendMessage", (newMessageReceived) => {
+  //   io.to(newMessageReceived.id).emit("messageReceived", newMessageReceived);
+  //   io.to(`store:${message.storeId}`).emit("storeNewMessage", message);
+  // });
+
+  socket.on("sendMessage", async (newMessageReceived) => {
+    console.log("New message received:", newMessageReceived);
+
+    const chatId = newMessageReceived.id;
+
+    try {
+      const chat = await Chat.findById(chatId);
+      if (!chat) {
+        console.error("Chat not found for ID:", chatId);
+        return;
+      }
+      console.log("Chat found:", chat);
+
+      if (chat.store) {
+        const storeId = chat.store.toString();
+
+        // Emit message to user(s) in that chat room
+        io.to(chatId).emit("messageReceived", newMessageReceived);
+
+        // Emit notification to the store room
+        if (storeId) {
+          console.log("Store ID found:", storeId);
+          io.to(`store:${storeId}`).emit("storeNewMessage", newMessageReceived);
         }
-      });
+      }
+
+      io.to(chatId).emit("messageReceived", newMessageReceived);
     } catch (error) {
-      console.error("Error handling new order notification:", error);
+      console.error("Error in sendMessage:", error);
     }
   });
 
-  // Other socket events (chat, store management, etc.)
+  socket.on("joinStoreRoom", (storeId) => {
+    socket.join(`store:${storeId}`);
+    console.log(`Store ${storeId} joined room store:${storeId}`);
+  });
+
+  socket.on("deleteMessage", (id) => {
+    console.log("deleteMessage: ", id);
+    io.to(id).emit("messageDeleted");
+  });
 
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
-    for (let userId in getUserSockets()) {
-      if (getUserSockets()[userId].includes(socket.id)) {
-        unregisterUserSocket(userId, socket.id);
+    for (let userId in userSockets) {
+      const socketIndex = userSockets[userId].indexOf(socket.id);
+      if (socketIndex !== -1) {
+        userSockets[userId].splice(socketIndex, 1);
         console.log(`User ${userId} disconnected, removed socket ID: ${socket.id}`);
         break;
       }
