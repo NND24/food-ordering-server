@@ -34,7 +34,7 @@ router.put("/:orderId/accept", authMiddleware, acceptOrder);
 router.put("/:orderId/update-status", authMiddleware, updateOrderStatus);
 router.put("/:orderId/cancel-order", authMiddleware, cancelOrder);
 
-router.get("store/:store_id", verifyToken, authorizeStoreStaff(["owner", "staff", "manager"]), getAllOrder); // CHECK
+router.get("/store/:store_id", verifyToken, authorizeStoreStaff(["owner", "staff", "manager"]), getAllOrder); // CHECK
 router.put("/:order_id", verifyToken, authorizeStoreStaff(["owner", "staff", "manager"]), updateOrder);
 
 module.exports = router;

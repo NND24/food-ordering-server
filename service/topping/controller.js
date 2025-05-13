@@ -1,7 +1,7 @@
 const Store = require("./shared/model/store");
-const ToppingGroup = require("./shared/model/topping");
+const ToppingGroup = require("./shared/model/toppingGroup");
 const Topping = require("./shared/model/topping");
-
+const Dish = require("./shared/model/dish")
 const { getPaginatedData } = require("./shared/utils/paging");
 
 const getAllTopping = async (req, res) => {
@@ -62,26 +62,26 @@ const getTopping = async (req, res) => {
 };
 const addToppingGroup = async (req, res) => {
   try {
-    const toppingGroup = req.body;
+    const { name } = req.body;
     const { store_id } = req.params;
-    console.log("Store ID:", store_id);
-    console.log("Topping Group:", toppingGroup);
 
-    if (!toppingGroup.name || toppingGroup.name.trim() === "") {
+    // Validate required fields
+    if (!name || name.trim() === "") {
       return res.status(400).json({ message: "Tên nhóm topping là bắt buộc." });
     }
 
-    // Check if the topping group already exists
+    // Check if the topping group already exists for the same store
     const existingGroup = await ToppingGroup.findOne({
-      name: toppingGroup.name.trim(),
+      name: name.trim(),
+      store: store_id,
     });
     if (existingGroup) {
       return res.status(409).json({ message: "Nhóm topping đã tồn tại." });
     }
 
-    // Create new topping group
+    // Create new topping group with empty toppings
     const newGroup = new ToppingGroup({
-      name: toppingGroup.name.trim(),
+      name: name.trim(),
       store: store_id,
       toppings: [],
     });
@@ -90,11 +90,10 @@ const addToppingGroup = async (req, res) => {
     return res.status(201).json(savedGroup);
   } catch (error) {
     console.error("Add Topping Group Error:", error);
-    return res
-      .status(500)
-      .json({ message: "Lỗi server khi thêm nhóm topping." });
+    return res.status(500).json({ message: "Lỗi server khi thêm nhóm topping." });
   }
 };
+
 const addToppingToGroup = async (req, res) => {
   try {
     const { group_id } = req.params;

@@ -447,6 +447,8 @@ services:
       - PORT=${GATEWAY_PORT:-5000}
     volumes:
       - ./shared:/usr/src/app/shared
+      - ./service/api-gateway:/usr/src/app
+      - gateway_node_modules:/usr/src/app/node_modules
     networks:
       - soa_network
     depends_on:
@@ -512,3 +514,4 @@ volumes:
   rating_node_modules:
   customerStore_node_modules:
   ws_node_modules:
+  gateway_node_modules:

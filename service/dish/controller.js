@@ -1,8 +1,8 @@
-const Category = require("./shared/model/category");
-const Store = require("./shared/model/store");
-const ToppingGroup = require("./shared/model/toppingGroup");
-const Dish = require("./shared/model/dish");
 
+const Dish = require("./shared/model/dish");
+const Topping = require("./shared/model/topping")
+const Cateogry = require("./shared/model/category")
+const ToppingGroup = require("./shared/model/toppingGroup")
 const { getPaginatedData } = require("./shared/utils/paging");
 
 const getAllDish = async (req, res) => {

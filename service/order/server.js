@@ -21,7 +21,6 @@ connectDB();
 app.use(morgan("dev"));
 
 // CORS
-// CORS
 app.use(
   cors({
     origin: "*",

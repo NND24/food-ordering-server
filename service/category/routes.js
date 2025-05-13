@@ -17,7 +17,7 @@ const router = express.Router();
 router.get("store/:store_id/category", getAllCategory); // CHECK
 router.get("/:category_id", getCategory); // CHECK
 router.post(
-  "/store/:store_id/category/add",
+  "/store/:store_id/add",
   verifyToken,
   authorizeStoreStaff(["owner", "manager"]),
   createCategory
