@@ -25,6 +25,27 @@ const getAllCategory = async (req, res) => {
   }
 };
 
+const getAllStoreCategory = async (req, res) => {
+  try {
+    const { name, limit, page } = req.query;
+    const { store_id } = req.params;
+
+    // Build filter options
+    let filterOptions = { store: store_id };
+    if (name) {
+      filterOptions.name = { $regex: name, $options: "i" };
+    }
+
+    // Use your paginated data helper
+    const response = await getPaginatedData(Category, filterOptions, "dishes", limit, page);
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Get All Store Category Error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 const getCategory = async (req, res) => {
   try {
     const { category_id } = req.params;
@@ -152,4 +173,5 @@ module.exports = {
   createCategory,
   updateCategory,
   deleteCategory,
+  getAllStoreCategory
 };

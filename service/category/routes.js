@@ -10,11 +10,13 @@ const {
   createCategory,
   updateCategory,
   deleteCategory,
+  getAllStoreCategory
 } = require("./controller");
 
 const router = express.Router();
 
-router.get("store/:store_id/category", getAllCategory); // CHECK
+router.get("/", getAllCategory); // CHECK
+router.get("/store/:store_id/category", getAllStoreCategory);
 router.get("/:category_id", getCategory); // CHECK
 router.post(
   "/store/:store_id/add",

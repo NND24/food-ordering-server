@@ -6,6 +6,7 @@ const Store = require("./shared/model/store");
 const Rating = require("./shared/model/rating");
 const Dish = require("./shared/model/dish");
 const Order = require("./shared/model/order");
+const User = require("./shared/model/user")
 
 const createError = require("./shared/utils/createError");
 const asyncHandler = require("express-async-handler");

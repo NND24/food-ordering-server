@@ -77,6 +77,42 @@ const getOrderDetail = asyncHandler(async (req, res, next) => {
   });
 });
 
+const getOrderDetailForStore = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    // Truy vấn danh sách món ăn
+    const order = await Order.findById(orderId).populate([
+      { path: "store", select: "name" }, // Include store details
+      { path: "user", select: "name email avatar" }, // Include user details
+      { path: "items.dish", select: "name price" }, // Include dish details
+      { path: "items.toppings", select: "name price" }, // Include toppings details
+      { path: "shipper" }
+    ]);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: order,
+    });
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid store ID format",
+      });
+    } else {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+};
+
 const getOrderDetailForDirectionShipper = asyncHandler(async (req, res, next) => {
   const { orderId } = req.params;
 
@@ -549,4 +585,5 @@ module.exports = {
   getOrderDetailForDirectionShipper,
   getAllOrder,
   updateOrder,
+  getOrderDetailForStore
 };
