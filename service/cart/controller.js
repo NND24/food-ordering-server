@@ -9,6 +9,7 @@ const Notification = require("./shared/model/notification");
 const Order = require("./shared/model/order");
 const { getSocketIo, getUserSockets } = require("./shared/utils/socketManager");
 const createError = require("./shared/utils/createError");
+const socket = require("./socketClient")
 
 const asyncHandler = require("express-async-handler");
 const { query } = require("express");
@@ -590,13 +591,28 @@ const completeCart = async (req, res) => {
     });
 
     await newNotification.save();
+    
 
-    // Emit to Socket service
-    const socketData = {
+    socket.emit("orderPlaced", {
       userIds,
-      newNotification,
-      newOrder,
-    };
+      notification: {
+        id: newNotification._id,
+        title: newNotification.title,
+        message: newNotification.message,
+        type: newNotification.type,
+        status: newNotification.status,
+        createdAt: newNotification.createdAt,
+        updatedAt: newNotification.updatedAt,
+      },
+      order: {
+        id: newOrder.id,
+        customerName: newOrder.customerName,
+        totalPrice: newOrder.totalPrice,
+        status: newOrder.status,
+        createdAt: newOrder.createdAt,
+      },
+      userId: userId
+    });
 
     return res.status(201).json({
       success: true,

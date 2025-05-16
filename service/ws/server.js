@@ -83,6 +83,45 @@ io.on("connection", (socket) => {
       console.error("Lỗi gửi thông báo:", error);
     }
   });
+  
+  socket.on("orderPlaced", async (data) => {
+    try {
+      const { userIds, order, notification, userId } = data;
+      
+      console.log({
+        _id: notification.id,
+        notification: notification,
+        orderId: order.id,
+        title: "New Order place",
+        message: "You got new order",
+        type: "order",
+        userId: userId,
+        status: "unread"
+      })
+
+      // Send notification to each connected user
+      userIds.forEach((uid) => {
+        const socketId = getUserSockets()[uid];
+        if (socketId) {
+          io.to(socketId).emit("newOrderNotification", {
+            _id: notification.id,
+            notification: notification,
+            orderId: order.id,
+            title: "New Order place",
+            message: "You got new order",
+            type: "order",
+            userId: userId,
+            status: "unread"
+          });
+          console.log("✅ Notification sent to user:", uid);
+        } else {
+          console.log("⚠️ User not connected or no socket found for user:", uid);
+        }
+      });
+    } catch (err) {
+      console.error("Error sending order notification:", err.message);
+    }
+  });
 
   // Handle send location
   socket.on("joinOrder", (orderId) => {

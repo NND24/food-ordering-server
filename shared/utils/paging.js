@@ -1,4 +1,4 @@
-const getPaginatedData = async (Model, filterOptions = {}, populateFields = [], limit = null, page = null) => {
+const getPaginatedData = async (Model, filterOptions = {}, populateFields = [], limit = null, page = null, sort = { createdAt: -1 }) => {
   try {
     let query = Model.find(filterOptions);
 
@@ -34,6 +34,9 @@ const getPaginatedData = async (Model, filterOptions = {}, populateFields = [], 
       } else {
         query = query.populate(populateFields);
       }
+    }
+    if (sort) {
+      query = query.sort(sort);
     }
 
     // Fetch data

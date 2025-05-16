@@ -2,7 +2,7 @@ const Notification = require("./shared/model/notification");
 const createError = require("./shared/utils/createError");
 const asyncHandler = require("express-async-handler");
 const getPaginatedData = require("./shared/utils/paging").getPaginatedData;
-const { Store } = require("./shared/model/store");
+const Store = require("./shared/model/store");
 const cron = require("node-cron");
 
 const getNotifications = asyncHandler(async (req, res, next) => {
@@ -59,7 +59,8 @@ const getStoreNotifications = asyncHandler(async (req, res, next) => {
       { userId: owner_id },
       [],
       limit,
-      page
+      page,
+      { createdAt: 1 }
     );
 
     res.status(200).json(result);
