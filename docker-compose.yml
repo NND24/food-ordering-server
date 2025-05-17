@@ -343,6 +343,7 @@ services:
       - ./shared:/usr/src/app/shared
       - ./service/upload:/usr/src/app
       - upload_node_modules:/usr/src/app/node_modules
+      - /etc/localtime:/etc/localtime:ro
     networks:
       - soa_network
     healthcheck:

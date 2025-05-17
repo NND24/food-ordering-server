@@ -1,6 +1,6 @@
 const { io } = require("socket.io-client");
 
-const socket = io( process.env.WEBSOCKET_PORT ? "http://ws:"+ process.env.WEBSOCKET_PORT : "http://ws:5100" , {
+const socket = io(process.env.WEBSOCKET_PORT ? "http://ws:" + process.env.WEBSOCKET_PORT : "http://ws:5100", {
   transports: ["websocket"],
   reconnectionAttempts: 3,
 });

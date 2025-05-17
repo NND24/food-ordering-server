@@ -1,4 +1,5 @@
 const User = require("./shared/model/user");
+const Shipper = require("./shared/model/shipper");
 const asyncHandler = require("express-async-handler");
 const createError = require("./shared/utils/createError");
 const { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, getMetadata } = require("firebase/storage");
@@ -69,7 +70,6 @@ const uploadAvatarShipperImage = asyncHandler(async (req, res, next) => {
 
   res.status(200).json(updateShipper);
 });
-
 
 const uploadImages = asyncHandler(async (req, res, next) => {
   if (!req.files || req.files.length === 0) {

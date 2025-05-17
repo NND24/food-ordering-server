@@ -65,22 +65,20 @@ app.use("/api/v1/:service/*", async (req, res) => {
     const rawBody = await getRawBody(req, {
       length: req.headers["content-length"] || undefined,
       limit: "10mb",
-      encoding: "utf-8", // Ensuring UTF-8 encoding
+      encoding: null, // Ensuring UTF-8 encoding
     });
-    console.log(rawBody)
-
+    console.log(rawBody);
 
     const response = await axios({
       method: req.method,
       url,
       headers: {
         ...req.headers,
-        "Content-Length": Buffer.byteLength(rawBody, "utf-8"),
+        "Content-Length": rawBody.length,
       },
       data: rawBody,
       withCredentials: true,
     });
-    
 
     // Forward Set-Cookie headers
     const setCookieHeaders = response.headers["set-cookie"] || [];
