@@ -6,6 +6,7 @@ const swaggerUi = require("swagger-ui-express");
 require("dotenv").config();
 const cors = require("cors");
 const getRawBody = require("raw-body");
+
 const app = express();
 const PORT = process.env.GATEWAY_PORT || 5000;
 
@@ -34,6 +35,7 @@ const services = {
 
 // Parse ALLOWED_ORIGINS from .env and split by commas
 const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
+
 
 app.use(
   cors({
@@ -65,7 +67,7 @@ app.use("/api/v1/:service/*", async (req, res) => {
     const rawBody = await getRawBody(req, {
       length: req.headers["content-length"] || undefined,
       limit: "10mb",
-      encoding: null, // Ensuring UTF-8 encoding
+      encoding: req.headers["content-type"]?.includes("text") ? "utf8" : null,
     });
     console.log(rawBody);
 
