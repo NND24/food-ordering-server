@@ -13,6 +13,7 @@ const getAllStore = async (req, res) => {
   try {
     const { name, category, sort, limit, page, lat, lon } = req.query;
     let filterOptions = {};
+    filterOptions.status = "APPROVED";
     if (name) filterOptions.name = { $regex: name, $options: "i" };
     if (category) {
       const categories = Array.isArray(category) ? category : category.split(",");
