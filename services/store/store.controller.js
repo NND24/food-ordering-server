@@ -1,4 +1,13 @@
-const { Store, Dish, ToppingGroup, Staff, Rating, Category, Topping } = require("./store.model");
+const {
+  Store,
+  Dish,
+  ToppingGroup,
+  Staff,
+  Rating,
+  Category,
+  Topping,
+} = require("./store.model");
+const sendEmail = require("../../utils/sendEmail");
 
 const { getSocketIo } = require("../../utils/socketManager");
 const Order = require("../order/order.model");
@@ -45,12 +54,16 @@ const getAllStore = async (req, res) => {
     let filterOptions = {};
     if (name) filterOptions.name = { $regex: name, $options: "i" };
     if (category) {
-      const categories = Array.isArray(category) ? category : category.split(",");
+      const categories = Array.isArray(category)
+        ? category
+        : category.split(",");
       filterOptions.storeCategory = { $in: categories };
     }
 
     // Fetch all stores first
-    let stores = await Store.find(filterOptions).populate("storeCategory").lean();
+    let stores = await Store.find(filterOptions)
+      .populate("storeCategory")
+      .lean();
 
     const storeRatings = await Rating.aggregate([
       {
@@ -62,7 +75,9 @@ const getAllStore = async (req, res) => {
       },
     ]);
     stores = stores.map((store) => {
-      const rating = storeRatings.find((r) => r._id.toString() == store._id.toString());
+      const rating = storeRatings.find(
+        (r) => r._id.toString() == store._id.toString()
+      );
       return {
         ...store,
         avgRating: rating ? rating.avgRating : 0,
@@ -82,7 +97,10 @@ const getAllStore = async (req, res) => {
         const dLon = toRad(lon2 - lon1);
         const a =
           Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+          Math.cos(toRad(lat1)) *
+            Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         const distance = R * c;
         return distance;
@@ -91,7 +109,12 @@ const getAllStore = async (req, res) => {
       // Sau khi tính khoảng cách
       stores = stores.map((store) => {
         if (store.address?.lat != null && store.address?.lon != null) {
-          store.distance = calculateDistance(latUser, lonUser, store.address.lat, store.address.lon);
+          store.distance = calculateDistance(
+            latUser,
+            lonUser,
+            store.address.lat,
+            store.address.lon
+          );
         } else {
           store.distance = Infinity;
         }
@@ -111,10 +134,14 @@ const getAllStore = async (req, res) => {
     if (sort === "rating") {
       stores = stores.sort((a, b) => b.avgRating - a.avgRating);
     } else if (sort === "standout") {
-      const storeOrders = await Order.aggregate([{ $group: { _id: "$store", orderCount: { $sum: 1 } } }]);
+      const storeOrders = await Order.aggregate([
+        { $group: { _id: "$store", orderCount: { $sum: 1 } } },
+      ]);
       stores = stores
         .map((store) => {
-          const order = storeOrders.find((o) => o._id.toString() == store._id.toString());
+          const order = storeOrders.find(
+            (o) => o._id.toString() == store._id.toString()
+          );
           return {
             ...store,
             orderCount: order ? order.orderCount : 0,
@@ -130,7 +157,10 @@ const getAllStore = async (req, res) => {
       const pageSize = parseInt(limit) || 10;
       const pageNumber = parseInt(page) || 1;
       const totalPages = Math.ceil(totalItems / pageSize);
-      const paginatedStores = stores.slice((pageNumber - 1) * pageSize, pageNumber * pageSize);
+      const paginatedStores = stores.slice(
+        (pageNumber - 1) * pageSize,
+        pageNumber * pageSize
+      );
 
       res.status(200).json({
         success: true,
@@ -181,7 +211,8 @@ const getStoreInformation = async (req, res) => {
 
     // Find rating data for the store
     const avgRating = storeRatings.length > 0 ? storeRatings[0].avgRating : 0;
-    const amountRating = storeRatings.length > 0 ? storeRatings[0].amountRating : 0;
+    const amountRating =
+      storeRatings.length > 0 ? storeRatings[0].amountRating : 0;
 
     res.status(200).json({
       success: true,
@@ -239,7 +270,13 @@ const getAllCategory = async (req, res) => {
     if (name) {
       filterOptions.name = { $regex: name, $options: "i" };
     }
-    const response = await getPaginatedData(Category, filterOptions, null, limit, page);
+    const response = await getPaginatedData(
+      Category,
+      filterOptions,
+      null,
+      limit,
+      page
+    );
     res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -272,7 +309,9 @@ const getAllOrder = async (req, res) => {
     const { store_id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(store_id)) {
-      return res.status(400).json({ success: false, message: "Invalid store_id format" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid store_id format" });
     }
 
     let filterOptions = { store: store_id };
@@ -285,7 +324,10 @@ const getAllOrder = async (req, res) => {
     // Add search filter if name query is present
     if (name && name.trim() !== "") {
       const regex = new RegExp(name, "i"); // Case-insensitive search
-      filterOptions.$or = [{ customerName: regex }, { customerPhonenumber: regex }];
+      filterOptions.$or = [
+        { customerName: regex },
+        { customerPhonenumber: regex },
+      ];
     }
 
     const response = await getPaginatedData(
@@ -307,7 +349,9 @@ const getAllOrder = async (req, res) => {
       const regex = new RegExp(name, "i");
       response.data = response.data.filter(
         (order) =>
-          order.user?.name?.match(regex) || order.customerName?.match(regex) || order.customerPhonenumber?.match(regex)
+          order.user?.name?.match(regex) ||
+          order.customerName?.match(regex) ||
+          order.customerPhonenumber?.match(regex)
       );
     }
 
@@ -547,7 +591,9 @@ const updateStaff = asyncHandler(async (req, res, next) => {
   }
   await staff.save();
 
-  res.status(200).json({ message: "Thông tin nhân viên đã được cập nhật", staff });
+  res
+    .status(200)
+    .json({ message: "Thông tin nhân viên đã được cập nhật", staff });
 });
 
 const getAvgRating = async (req, res) => {
@@ -588,7 +634,9 @@ const getAllRating = async (req, res) => {
     const page = parseInt(no);
 
     if (page < 1) {
-      return res.status(400).json({ success: false, message: "Invalid page number" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid page number" });
     }
 
     // Tạo bộ lọc tìm kiếm
@@ -636,7 +684,13 @@ const getAllStoreRating = async (req, res) => {
     const { limit, page, sort } = req.query;
 
     let filterOptions = { store: storeId };
-    const result = await getPaginatedData(Rating, filterOptions, "user dishes", parseInt(limit), parseInt(page));
+    const result = await getPaginatedData(
+      Rating,
+      filterOptions,
+      "user dishes",
+      parseInt(limit),
+      parseInt(page)
+    );
 
     if (sort === "desc") {
       result.data = result.data.sort((a, b) => b.ratingValue - a.ratingValue);
@@ -838,7 +892,9 @@ const addToppingGroup = async (req, res) => {
     }
 
     // Check if the topping group already exists
-    const existingGroup = await ToppingGroup.findOne({ name: toppingGroup.name.trim() });
+    const existingGroup = await ToppingGroup.findOne({
+      name: toppingGroup.name.trim(),
+    });
     if (existingGroup) {
       return res.status(409).json({ message: "Nhóm topping đã tồn tại." });
     }
@@ -854,7 +910,9 @@ const addToppingGroup = async (req, res) => {
     return res.status(201).json(savedGroup);
   } catch (error) {
     console.error("Add Topping Group Error:", error);
-    return res.status(500).json({ message: "Lỗi server khi thêm nhóm topping." });
+    return res
+      .status(500)
+      .json({ message: "Lỗi server khi thêm nhóm topping." });
   }
 };
 
@@ -871,7 +929,9 @@ const deleteToppingGroup = async (req, res) => {
     return res.status(200).json({ message: "Xóa nhóm topping thành công." });
   } catch (error) {
     console.error("Delete Topping Group Error:", error);
-    return res.status(500).json({ message: "Lỗi server khi xóa nhóm topping." });
+    return res
+      .status(500)
+      .json({ message: "Lỗi server khi xóa nhóm topping." });
   }
 };
 
@@ -890,7 +950,9 @@ const removeToppingFromGroup = async (req, res) => {
 
     // Find and remove the topping
     const initialLength = toppingGroup.toppings.length;
-    toppingGroup.toppings = toppingGroup.toppings.filter((topping) => topping._id.toString() !== topping_id);
+    toppingGroup.toppings = toppingGroup.toppings.filter(
+      (topping) => topping._id.toString() !== topping_id
+    );
 
     if (toppingGroup.toppings.length === initialLength) {
       return res.status(404).json({
@@ -948,7 +1010,9 @@ const addToppingToDish = async (req, res) => {
     // Extract valid toppings from the groups
     let validToppings = [];
     toppingGroups.forEach((group) => {
-      let filteredToppings = group.toppings.filter((topping) => topping_ids.includes(topping._id.toString()));
+      let filteredToppings = group.toppings.filter((topping) =>
+        topping_ids.includes(topping._id.toString())
+      );
       validToppings.push(...filteredToppings);
     });
 
@@ -966,7 +1030,11 @@ const addToppingToDish = async (req, res) => {
 
     // Filter out toppings that are already added to the dish
     let newToppings = validToppings.filter(
-      (topping) => !dish.toppings.some((existingTopping) => existingTopping._id.toString() === topping._id.toString())
+      (topping) =>
+        !dish.toppings.some(
+          (existingTopping) =>
+            existingTopping._id.toString() === topping._id.toString()
+        )
     );
 
     if (newToppings.length === 0) {
@@ -1062,7 +1130,9 @@ const createDish = async (req, res) => {
     const dishData = req.body; // Get dish details from request body
     // Ensure required fields exist
     if (!dishData.name || !dishData.price) {
-      return res.status(400).json({ message: "Dish name and price are required" });
+      return res
+        .status(400)
+        .json({ message: "Dish name and price are required" });
     }
 
     Object.keys(dishData).forEach((key) => {
@@ -1153,7 +1223,9 @@ const createCategory = async (req, res) => {
     // Save to database
     const savedCategory = await newCategory.save();
 
-    res.status(201).json({ message: "Category created", category: savedCategory });
+    res
+      .status(201)
+      .json({ message: "Category created", category: savedCategory });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -1180,7 +1252,9 @@ const updateCategory = async (req, res) => {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    res.status(200).json({ message: "Category updated", category: updatedCategory });
+    res
+      .status(200)
+      .json({ message: "Category updated", category: updatedCategory });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -1222,7 +1296,9 @@ const updateTopping = async (req, res) => {
 
     // Validate input
     if (!name || price == null) {
-      return res.status(400).json({ success: false, message: "Name and price are required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Name and price are required" });
     }
 
     // Find and update the topping
@@ -1233,7 +1309,9 @@ const updateTopping = async (req, res) => {
     );
 
     if (!updatedTopping) {
-      return res.status(404).json({ success: false, message: "Topping not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Topping not found" });
     }
 
     res.status(200).json({ success: true, data: updatedTopping });
@@ -1249,7 +1327,9 @@ const updateStore = async (req, res) => {
     const updates = req.body;
 
     if (!store_id || !updates) {
-      return res.status(400).json({ message: "Store ID and updates are required." });
+      return res
+        .status(400)
+        .json({ message: "Store ID and updates are required." });
     }
 
     // Ensure only allowed fields are updated
@@ -1288,19 +1368,26 @@ const updateStore = async (req, res) => {
 };
 
 const registerStore = asyncHandler(async (req, res) => {
-  const { owner, email, password, name, description, foodType, address } = req.body;
+  const { owner, email, password, name, description, foodType, address } =
+    req.body;
   let user = null;
 
   if (!name?.trim() || !address.full_address.trim()) {
-    return res.status(400).json({ message: "Tên cửa hàng và địa chỉ là bắt buộc." });
+    return res
+      .status(400)
+      .json({ message: "Tên cửa hàng và địa chỉ là bắt buộc." });
   }
   if (!address.lat || !address.lon) {
-    return res.status(400).json({ message: "Vui lòng cung cấp tọa độ địa chỉ." });
+    return res
+      .status(400)
+      .json({ message: "Vui lòng cung cấp tọa độ địa chỉ." });
   }
   if (!owner) {
     // Kiểm tra xem người dùng có phải người dùng mới không
     if (!email || !password) {
-      return res.status(400).json({ message: "Email và mật khẩu là bắt buộc." });
+      return res
+        .status(400)
+        .json({ message: "Email và mật khẩu là bắt buộc." });
     } else {
       user = await User.create({
         name: email.split("@")[0],
@@ -1317,7 +1404,9 @@ const registerStore = asyncHandler(async (req, res) => {
   // Check if user already owns a store (double check )
   const ownStore = await Store.findOne({ owner: userId });
   if (ownStore) {
-    return res.status(400).json({ message: "Người đăng ký đã sở hữu cửa hàng." });
+    return res
+      .status(400)
+      .json({ message: "Người đăng ký đã sở hữu cửa hàng." });
   }
 
   // Check if store name already exists ( double check )
@@ -1341,7 +1430,9 @@ const registerStore = asyncHandler(async (req, res) => {
     user.role.push("owner");
     await user.save();
   }
-  return res.status(201).json({ message: "Cửa hàng đã được đăng ký thành công!", store });
+  return res
+    .status(201)
+    .json({ message: "Cửa hàng đã được đăng ký thành công!", store });
 });
 
 const checkRegisterStoreName = async (req, res) => {
@@ -1403,11 +1494,28 @@ const approveStore = asyncHandler(async (req, res, next) => {
   const { store_id } = req.params;
 
   try {
-    const store = await Store.findByIdAndUpdate(store_id, { status: "APPROVED" }, { new: true });
+    const store = await Store.findByIdAndUpdate(
+      store_id,
+      { status: "APPROVED" },
+      { new: true }
+    ).populate("owner", "email");
+    console.log("Store approve: ", store);
 
     if (!store) {
       return next(createError(404, "Cannot find store"));
     }
+
+    const resetURL = `
+          <p>Your account has been approved / unlocked</p>
+          <p> You can login back to your account</p>
+        `;
+    const data = {
+      to: store.owner.email,
+      text: "",
+      subject: "Approve/ Reopen the account",
+      html: resetURL,
+    };
+    await sendEmail(data);
 
     res.json({ message: "Store approved", store });
   } catch (error) {
@@ -1419,7 +1527,11 @@ const blockedStore = asyncHandler(async (req, res, next) => {
   const { store_id } = req.params;
 
   try {
-    const store = await Store.findByIdAndUpdate(store_id, { status: "BLOCKED" }, { new: true });
+    const store = await Store.findByIdAndUpdate(
+      store_id,
+      { status: "BLOCKED" },
+      { new: true }
+    );
 
     if (!store) {
       return next(createError(404, "Cannot find store"));
