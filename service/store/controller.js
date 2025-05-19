@@ -6,7 +6,7 @@ const Store = require("./shared/model/store");
 const Rating = require("./shared/model/rating");
 const Dish = require("./shared/model/dish");
 const Order = require("./shared/model/order");
-const User = require("./shared/model/user")
+const User = require("./shared/model/user");
 
 const createError = require("./shared/utils/createError");
 const asyncHandler = require("express-async-handler");
@@ -197,6 +197,7 @@ const getAllStore = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 const approveStore = asyncHandler(async (req, res, next) => {
   const { store_id } = req.params;
 
@@ -205,11 +206,24 @@ const approveStore = asyncHandler(async (req, res, next) => {
       store_id,
       { status: "APPROVED" },
       { new: true }
-    );
+    ).populate("owner", "email");
+    console.log("Store approve: ", store);
 
     if (!store) {
       return next(createError(404, "Cannot find store"));
     }
+
+    const resetURL = `
+          <p>Your account has been approved / unlocked</p>
+          <p> You can login back to your account</p>
+        `;
+    const data = {
+      to: store.owner.email,
+      text: "",
+      subject: "Approve/ Reopen the account",
+      html: resetURL,
+    };
+    await sendEmail(data);
 
     res.json({ message: "Store approved", store });
   } catch (error) {

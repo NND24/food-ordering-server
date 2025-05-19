@@ -4,8 +4,8 @@ const Dish = require("./shared/model/dish");
 const Order = require("./shared/model/order");
 const createError = require("./shared/utils/createError");
 const asyncHandler = require("express-async-handler");
-const {getPaginatedData} = require("./shared/utils/paging")
-const mongoose = require("mongoose")
+const { getPaginatedData } = require("./shared/utils/paging");
+const mongoose = require("mongoose");
 
 const getUserOrder = asyncHandler(async (req, res, next) => {
   const userId = req?.user?._id;
@@ -87,7 +87,7 @@ const getOrderDetailForStore = async (req, res) => {
       { path: "user", select: "name email avatar" }, // Include user details
       { path: "items.dish", select: "name price" }, // Include dish details
       { path: "items.toppings", select: "name price" }, // Include toppings details
-      { path: "shipper" }
+      { path: "shipper" },
     ]);
 
     if (!order) {
@@ -113,40 +113,42 @@ const getOrderDetailForStore = async (req, res) => {
   }
 };
 
-const getOrderDetailForDirectionShipper = asyncHandler(async (req, res, next) => {
-  const { orderId } = req.params;
+const getOrderDetailForDirectionShipper = asyncHandler(
+  async (req, res, next) => {
+    const { orderId } = req.params;
 
-  if (!orderId) {
-    next(
-      createError(400, {
-        success: false,
-        message: "orderId not found",
+    if (!orderId) {
+      next(
+        createError(400, {
+          success: false,
+          message: "orderId not found",
+        })
+      );
+    }
+
+    const orderDetail = await Order.findById(orderId)
+      .populate({
+        path: "store",
       })
-    );
+      .populate("items.dish")
+      .populate("items.toppings")
+      .populate({ path: "user" });
+
+    if (!orderDetail || orderDetail.length === 0) {
+      next(
+        createError(404, {
+          success: false,
+          message: "Order not found",
+        })
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      data: orderDetail,
+    });
   }
-
-  const orderDetail = await Order.findById(orderId)
-    .populate({
-      path: "store",
-    })
-    .populate("items.dish")
-    .populate("items.toppings")
-    .populate({ path: "user" });
-
-  if (!orderDetail || orderDetail.length === 0) {
-    next(
-      createError(404, {
-        success: false,
-        message: "Order not found",
-      })
-    );
-  }
-
-  res.status(200).json({
-    success: true,
-    data: orderDetail,
-  });
-});
+);
 
 const getFinishedOrders = asyncHandler(async (req, res, next) => {
   try {
@@ -224,7 +226,11 @@ const acceptOrder = asyncHandler(async (req, res, next) => {
     );
   }
 
-  const order = await Order.findById(orderId);
+  const order = await Order.findById(orderId)
+    .populate({ path: "store" })
+    .populate("items.dish")
+    .populate("items.toppings")
+    .populate({ path: "user" });
 
   if (!order) {
     return next(
@@ -344,44 +350,59 @@ const getDeliveredOrders = asyncHandler(async (req, res, next) => {
   const shipperId = req?.user?._id;
 
   if (!shipperId) {
-    return next(createError(400, { success: false, message: "Shipper not found" }));
+    return next(
+      createError(400, { success: false, message: "Shipper not found" })
+    );
   }
 
   try {
     // Lấy `page` và `limit` từ query params (mặc định page = 1, limit = 5)
-    let { page, limit } = req.query;
-    page = parseInt(page) || 1;
-    limit = parseInt(limit) || 5;
-    const skip = (page - 1) * limit; // Tính offset
+    let { page, limit, all } = req.query;
+    const isGetAll = all === "true";
 
-    // Lấy tổng số đơn hàng đã giao
-    const totalOrders = await Order.countDocuments({
+    if (!isGetAll) {
+      page = parseInt(page) || 1;
+      limit = parseInt(limit) || 5;
+    }
+
+    const filter = {
       shipper: shipperId,
       status: "done",
-    });
+    };
 
-    // Lấy danh sách đơn hàng theo phân trang
-    const deliveredOrders = await Order.find({
-      shipper: shipperId,
-      status: "done",
-    })
+    // Đếm tổng số đơn hàng
+    const totalOrders = await Order.countDocuments(filter);
+
+    // Truy vấn danh sách đơn hàng
+    let query = Order.find(filter)
       .populate({ path: "store" })
       .populate("items.dish")
       .populate("items.toppings")
       .populate({ path: "user" })
-      .sort({ updatedAt: -1 })
-      .skip(skip)
-      .limit(limit);
+      .sort({ updatedAt: -1 });
+
+    if (!isGetAll) {
+      const skip = (page - 1) * limit;
+      query = query.skip(skip).limit(limit);
+    }
+
+    const deliveredOrders = await query;
 
     res.status(200).json({
       success: true,
-      page,
-      totalPages: Math.ceil(totalOrders / limit),
+      page: isGetAll ? 1 : page,
+      totalPages: isGetAll ? 1 : Math.ceil(totalOrders / limit),
       totalOrders,
       data: deliveredOrders,
     });
   } catch (error) {
-    next(createError(500, { success: false, message: "Server error", error }));
+    next(
+      createError(500, {
+        success: false,
+        message: "Server error",
+        error: error.message,
+      })
+    );
   }
 });
 
@@ -395,7 +416,7 @@ const getShipperOrders = asyncHandler(async (req, res, next) => {
     // Lấy tất cả đơn hàng của shipper này
     const allOrders = await Order.find({
       shipper: shipperId,
-      status: "finished",
+      status: "done",
     });
 
     // Lọc ra đơn hàng của tháng hiện tại
@@ -404,7 +425,10 @@ const getShipperOrders = asyncHandler(async (req, res, next) => {
 
     const ordersThisMonth = allOrders.filter((order) => {
       const orderDate = new Date(order.createdAt);
-      return orderDate.getMonth() + 1 === currentMonth && orderDate.getFullYear() === currentYear;
+      return (
+        orderDate.getMonth() + 1 === currentMonth &&
+        orderDate.getFullYear() === currentYear
+      );
     });
 
     res.status(200).json({
@@ -493,7 +517,9 @@ const getAllOrder = async (req, res) => {
     const { store_id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(store_id)) {
-      return res.status(400).json({ success: false, message: "Invalid store_id format" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid store_id format" });
     }
 
     let filterOptions = { store: store_id };
@@ -506,7 +532,10 @@ const getAllOrder = async (req, res) => {
     // Add search filter if name query is present
     if (name && name.trim() !== "") {
       const regex = new RegExp(name, "i"); // Case-insensitive search
-      filterOptions.$or = [{ customerName: regex }, { customerPhonenumber: regex }];
+      filterOptions.$or = [
+        { customerName: regex },
+        { customerPhonenumber: regex },
+      ];
     }
 
     const response = await getPaginatedData(
@@ -528,7 +557,9 @@ const getAllOrder = async (req, res) => {
       const regex = new RegExp(name, "i");
       response.data = response.data.filter(
         (order) =>
-          order.user?.name?.match(regex) || order.customerName?.match(regex) || order.customerPhonenumber?.match(regex)
+          order.user?.name?.match(regex) ||
+          order.customerName?.match(regex) ||
+          order.customerPhonenumber?.match(regex)
       );
     }
 
@@ -585,5 +616,5 @@ module.exports = {
   getOrderDetailForDirectionShipper,
   getAllOrder,
   updateOrder,
-  getOrderDetailForStore
+  getOrderDetailForStore,
 };
