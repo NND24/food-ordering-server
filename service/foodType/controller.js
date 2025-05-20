@@ -13,19 +13,27 @@ const getAllFoodTypes = asyncHandler(async (req, res, next) => {
 });
 
 const createFoodType = asyncHandler(async (req, res, next) => {
-  const { name } = req.body;
+  const { name, image } = req.body;
+
   if (!name || typeof name !== "string") {
     return next(createError(400, "Tên loại thức ăn không hợp lệ"));
   }
-  const findFoodType = await FoodType.isNameExists(name);
-  if (!findFoodType) {
-    await FoodType.create({
-      name,
-    });
-    res.status(201).json("Tạo loại thức ăn thành công");
-  } else {
-    next(createError(409, "Loại thức ăn đã tồn tại"));
+
+  if (!image || !image.url) {
+    return next(createError(400, "Ảnh loại thức ăn không hợp lệ"));
   }
+
+  const exists = await FoodType.isNameExists(name);
+  if (exists) {
+    return next(createError(409, "Loại thức ăn đã tồn tại"));
+  }
+
+  await FoodType.create({
+    name,
+    image, // ✅ truyền đủ image.url
+  });
+
+  res.status(201).json("Tạo loại thức ăn thành công");
 });
 
 const getFoodType = asyncHandler(async (req, res, next) => {
@@ -44,17 +52,21 @@ const getFoodType = asyncHandler(async (req, res, next) => {
 });
 
 const updateFoodType = asyncHandler(async (req, res, next) => {
-  const foodTypeId = req?.foodType?._id;
+  const foodTypeId = req.params.id;
   try {
-    const updateFoodType = await FoodType.findByIdAndUpdate(foodTypeId, req.body, { new: true });
-    res.json(updateUser);
+    const updateFoodType = await FoodType.findByIdAndUpdate(
+      foodTypeId,
+      req.body,
+      { new: true }
+    );
+    res.json(updateFoodType);
   } catch (error) {
     next(error);
   }
 });
 
 const deleteFoodType = asyncHandler(async (req, res, next) => {
-  const foodTypeId = req?.foodType?._id;
+  const foodTypeId = req.params.id;
   try {
     await FoodType.findByIdAndDelete(foodTypeId);
     res.json({ msg: "Delete FoodType successfully!" });
@@ -63,4 +75,10 @@ const deleteFoodType = asyncHandler(async (req, res, next) => {
   }
 });
 
-module.exports = { getAllFoodTypes, getFoodType, updateFoodType, deleteFoodType, createFoodType };
+module.exports = {
+  getAllFoodTypes,
+  getFoodType,
+  updateFoodType,
+  deleteFoodType,
+  createFoodType,
+};

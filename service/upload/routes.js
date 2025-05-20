@@ -10,6 +10,7 @@ router.post("/avatar", authMiddleware, validateMongoDbId("id"), uploadToFirebase
 router.post("/images", authMiddleware, validateMongoDbId("id"), uploadToFirebase.array("file", 10), uploadImages);
 router.post("/avatar/shipper", uploadToFirebase.array("file", 10), uploadImages);
 router.post("/avatar/employee", uploadToFirebase.array("file", 10), uploadImages);
+router.post("/image/foodtype", uploadToFirebase.array("file", 10), uploadImages);
 router.delete("/delete-file", authMiddleware, deleteFile);
 
 module.exports = router;
