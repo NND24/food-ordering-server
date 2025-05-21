@@ -1,5 +1,5 @@
 const User = require("./shared/model/user");
-const Store  = require("./shared/model/store");
+const Store = require("./shared/model/store");
 const Shipper = require("./shared/model/shipper");
 const Employee = require("./shared/model/employee");
 
@@ -10,7 +10,6 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const asyncHandler = require("express-async-handler");
 const { OAuth2Client } = require("google-auth-library");
-
 
 const hashPassword = (password, salt) => {
   return crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
@@ -31,10 +30,7 @@ const generateRefreshToken = (id) => {
 const storeOwnByUser = asyncHandler(async (req, res, next) => {
   const { _id } = req.user;
   const findStore = await Store.findOne({
-    $or: [
-      { owner: _id },
-      { staff: _id },
-    ],
+    $or: [{ owner: _id }, { staff: _id }],
   });
 
   if (!findStore) {
@@ -42,7 +38,7 @@ const storeOwnByUser = asyncHandler(async (req, res, next) => {
   }
 
   res.status(200).json({ data: findStore });
-})
+});
 
 const register = asyncHandler(async (req, res, next) => {
   const { name, email, phonenumber, gender, password } = req.body;
@@ -132,7 +128,7 @@ const registerShipper = asyncHandler(async (req, res, next) => {
 
 const login = asyncHandler(async (req, res, next) => {
   try {
-    console.log("Login call funciton")
+    console.log("Login call funciton");
     const { email, password } = req.body;
     const { getRole, getStore } = req.query; // Get query params for role and store info
 
@@ -257,7 +253,7 @@ const googleLoginWithToken = asyncHandler(async (req, res, next) => {
       newUser = new User({
         name: payload.name,
         email: payload.email,
-        password: "123456789",
+        password: "123456789asdfghjkzxczcz",
         avatar: {
           filePath: "",
           url: payload.picture,
@@ -348,7 +344,7 @@ const loginWithGoogleMobile = asyncHandler(async (req, res, next) => {
       newUser = new User({
         name: name,
         email: email,
-        password: "123456789",
+        password: "123456789asdfghjkzxczcz",
         isGoogleLogin: true,
       });
       await newUser.save();
@@ -446,7 +442,7 @@ const logout = asyncHandler(async (req, res, next) => {
     secure: true,
     sameSite: "Strict",
   });
-  res.status(200).json({data:"Logout successful"});
+  res.status(200).json({ status: "success", message: "Logout successful" });
 });
 
 const changePassword = asyncHandler(async (req, res, next) => {
@@ -469,7 +465,7 @@ const changePassword = asyncHandler(async (req, res, next) => {
   user.password = newPassword;
   await user.save();
 
-  res.status(200).json("Đổi mật khẩu thành công!");
+  res.status(200).json({ status: "success", message: "Đổi mật khẩu thành công!" });
 });
 
 const resetPassword = asyncHandler(async (req, res, next) => {
@@ -481,7 +477,7 @@ const resetPassword = asyncHandler(async (req, res, next) => {
   user.password = newPassword;
   await user.save();
 
-  res.status(200).json("Đổi mật khẩu thành công!");
+  res.status(200).json({ status: "success", message: "Đổi mật khẩu thành công!" });
 });
 
 const forgotPassword = asyncHandler(async (req, res, next) => {
@@ -504,7 +500,7 @@ const forgotPassword = asyncHandler(async (req, res, next) => {
     html: resetURL,
   };
   await sendEmail(data);
-  res.status(200).json("Send email successfully");
+  res.status(200).json({ status: "success", message: "Send email successfully" });
 });
 
 const checkOTP = asyncHandler(async (req, res, next) => {
@@ -523,7 +519,7 @@ const checkOTP = asyncHandler(async (req, res, next) => {
   user.otpExpires = undefined;
   await user.save();
 
-  res.status(200).json("OTP hợp lệ");
+  res.status(200).json({ status: "success", message: "OTP hợp lệ" });
 });
 
 const forgotPasswordShipper = asyncHandler(async (req, res, next) => {
@@ -531,9 +527,7 @@ const forgotPasswordShipper = asyncHandler(async (req, res, next) => {
 
   const shipper = await Shipper.findOne({ email, isGoogleLogin: false });
   if (!shipper) {
-    return next(
-      createError(404, "Tài khoản không tồn tại hoặc tài khoản được đăng nhập bằng phương thức khác")
-    );
+    return next(createError(404, "Tài khoản không tồn tại hoặc tài khoản được đăng nhập bằng phương thức khác"));
   }
 
   const otp = await shipper.createOtp();
@@ -609,7 +603,6 @@ const resetPasswordShipper = asyncHandler(async (req, res, next) => {
     message: "Đổi mật khẩu thành công!",
   });
 });
-
 
 const forgotPasswordEmployee = asyncHandler(async (req, res, next) => {
   const { email } = req.body;
