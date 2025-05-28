@@ -31,6 +31,11 @@ const storeSchema = new mongoose.Schema(
       enum: ["PENDING", "APPROVED", "BLOCKED"],
       default: "PENDING",
     },
+    openStatus: {
+      type: String,
+      enum: ["OPEN", "CLOSED"],
+      default: "OPEN",
+    },
     paperWork: {
       IC_front: { filePath: String, url: String },
       IC_back: { filePath: String, url: String },

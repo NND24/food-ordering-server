@@ -34,6 +34,11 @@ const dishSchema = new mongoose.Schema(
     description: {
       type: String,
     },
+    stockStatus: {
+      type: String,
+      enum: ["AVAILABLE", "OUT_OF_STOCK"],
+      default: "AVAILABLE",
+    },
   },
   { timestamps: true }
 );
