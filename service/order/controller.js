@@ -113,42 +113,40 @@ const getOrderDetailForStore = async (req, res) => {
   }
 };
 
-const getOrderDetailForDirectionShipper = asyncHandler(
-  async (req, res, next) => {
-    const { orderId } = req.params;
+const getOrderDetailForDirectionShipper = asyncHandler(async (req, res, next) => {
+  const { orderId } = req.params;
 
-    if (!orderId) {
-      next(
-        createError(400, {
-          success: false,
-          message: "orderId not found",
-        })
-      );
-    }
-
-    const orderDetail = await Order.findById(orderId)
-      .populate({
-        path: "store",
+  if (!orderId) {
+    next(
+      createError(400, {
+        success: false,
+        message: "orderId not found",
       })
-      .populate("items.dish")
-      .populate("items.toppings")
-      .populate({ path: "user" });
-
-    if (!orderDetail || orderDetail.length === 0) {
-      next(
-        createError(404, {
-          success: false,
-          message: "Order not found",
-        })
-      );
-    }
-
-    res.status(200).json({
-      success: true,
-      data: orderDetail,
-    });
+    );
   }
-);
+
+  const orderDetail = await Order.findById(orderId)
+    .populate({
+      path: "store",
+    })
+    .populate("items.dish")
+    .populate("items.toppings")
+    .populate({ path: "user" });
+
+  if (!orderDetail || orderDetail.length === 0) {
+    next(
+      createError(404, {
+        success: false,
+        message: "Order not found",
+      })
+    );
+  }
+
+  res.status(200).json({
+    success: true,
+    data: orderDetail,
+  });
+});
 
 const getFinishedOrders = asyncHandler(async (req, res, next) => {
   try {
@@ -323,16 +321,8 @@ const updateOrderStatus = asyncHandler(async (req, res, next) => {
     return next(createError(400, `Order is already in '${status}' status.`));
   }
 
-  if (
-    !validTransitions[currentStatus] ||
-    !validTransitions[currentStatus].includes(status)
-  ) {
-    return next(
-      createError(
-        400,
-        `Cannot change status from '${currentStatus}' to '${status}'.`
-      )
-    );
+  if (!validTransitions[currentStatus] || !validTransitions[currentStatus].includes(status)) {
+    return next(createError(400, `Cannot change status from '${currentStatus}' to '${status}'.`));
   }
 
   order.status = status;
@@ -353,7 +343,7 @@ const cancelOrder = asyncHandler(async (req, res, next) => {
     return next(createError(404, "Order not found"));
   }
 
-  const cancellableStatuses = ["preorder", "pending", "confirmed"];
+  const cancellableStatuses = ["preorder", "pending"];
 
   if (cancellableStatuses.includes(order.status)) {
     order.status = "cancelled";
@@ -376,9 +366,7 @@ const getDeliveredOrders = asyncHandler(async (req, res, next) => {
   const shipperId = req?.user?._id;
 
   if (!shipperId) {
-    return next(
-      createError(400, { success: false, message: "Shipper not found" })
-    );
+    return next(createError(400, { success: false, message: "Shipper not found" }));
   }
 
   try {
@@ -451,10 +439,7 @@ const getShipperOrders = asyncHandler(async (req, res, next) => {
 
     const ordersThisMonth = allOrders.filter((order) => {
       const orderDate = new Date(order.createdAt);
-      return (
-        orderDate.getMonth() + 1 === currentMonth &&
-        orderDate.getFullYear() === currentYear
-      );
+      return orderDate.getMonth() + 1 === currentMonth && orderDate.getFullYear() === currentYear;
     });
 
     res.status(200).json({
@@ -543,9 +528,7 @@ const getAllOrder = async (req, res) => {
     const { store_id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(store_id)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid store_id format" });
+      return res.status(400).json({ success: false, message: "Invalid store_id format" });
     }
 
     let filterOptions = { store: store_id };
@@ -558,10 +541,7 @@ const getAllOrder = async (req, res) => {
     // Add search filter if name query is present
     if (name && name.trim() !== "") {
       const regex = new RegExp(name, "i"); // Case-insensitive search
-      filterOptions.$or = [
-        { customerName: regex },
-        { customerPhonenumber: regex },
-      ];
+      filterOptions.$or = [{ customerName: regex }, { customerPhonenumber: regex }];
     }
 
     const response = await getPaginatedData(
@@ -583,9 +563,7 @@ const getAllOrder = async (req, res) => {
       const regex = new RegExp(name, "i");
       response.data = response.data.filter(
         (order) =>
-          order.user?.name?.match(regex) ||
-          order.customerName?.match(regex) ||
-          order.customerPhonenumber?.match(regex)
+          order.user?.name?.match(regex) || order.customerName?.match(regex) || order.customerPhonenumber?.match(regex)
       );
     }
 
