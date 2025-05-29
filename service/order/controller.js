@@ -305,8 +305,34 @@ const updateOrderStatus = asyncHandler(async (req, res, next) => {
     .populate("items.dish")
     .populate("items.toppings")
     .populate({ path: "user" });
+
   if (!order) {
     return next(createError(404, "Order not found"));
+  }
+
+  const currentStatus = order.status;
+
+  // Validate status transitions
+  const validTransitions = {
+    taken: ["delivering", "finished"],
+    delivering: ["delivered"],
+    delivered: ["done"],
+  };
+
+  if (status === currentStatus) {
+    return next(createError(400, `Order is already in '${status}' status.`));
+  }
+
+  if (
+    !validTransitions[currentStatus] ||
+    !validTransitions[currentStatus].includes(status)
+  ) {
+    return next(
+      createError(
+        400,
+        `Cannot change status from '${currentStatus}' to '${status}'.`
+      )
+    );
   }
 
   order.status = status;
@@ -314,7 +340,7 @@ const updateOrderStatus = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    message: "Order status updated successfully",
+    message: `Order status updated to '${status}' successfully`,
     data: order,
   });
 });
