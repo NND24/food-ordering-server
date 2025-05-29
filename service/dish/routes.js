@@ -11,7 +11,8 @@ const {
     updateDish,
     createDish,
     deleteDish,
-    getDish
+    getDish,
+    onOffSaleStatus
 } = require("./controller")
 
 const router = express.Router();
@@ -20,6 +21,7 @@ router.get("/store/:store_id",verifyToken, authorizeStoreStaff(["owner", "staff"
 router.get("/:dish_id", getDish); 
 router.put("/:dish_id", verifyToken, authorizeStoreStaff(["owner", "manager"]), updateDish)
 router.post("/store/:store_id" , verifyToken, authorizeStoreStaff(["owner", "manager"]), createDish);
+router.post("/:dish_id/saleStatus", verifyToken, authorizeStoreStaff(["owner", "manager", "staff"]), onOffSaleStatus)
 router.delete("/:dish_id", verifyToken, authorizeStoreStaff(["owner", "manager"]), deleteDish);
 
 

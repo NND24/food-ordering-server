@@ -172,10 +172,34 @@ const deleteDish = async (req, res) => {
   }
 };
 
+const onOffSaleStatus = async ( req, res ) => {
+  try {
+    const { dish_id } = req.params;
+    const dish = await Dish.findById(dish_id)
+    if (dish) {
+      if ( dish.stockStatus == "AVAILABLE" ) {
+        dish.stockStatus = "OUT_OF_STOCK"
+      }
+      else {
+        dish.stockStatus = "AVAILABLE"
+      }
+    }
+    dish.save();
+    return res.status(200).json({
+      message: "Dish on/off stock status successfully",
+      data: dish,
+    });
+  } catch (error) {
+    console.error("Error on/off sale for dish:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
 module.exports = {
   getAllDish,
   updateDish,
   createDish,
   deleteDish,
   getDish,
+  onOffSaleStatus
 };
