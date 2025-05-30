@@ -9,7 +9,7 @@ const Notification = require("./shared/model/notification");
 const Order = require("./shared/model/order");
 const { getSocketIo, getUserSockets } = require("./shared/utils/socketManager");
 const createError = require("./shared/utils/createError");
-const socket = require("./socketClient")
+const socket = require("./socketClient");
 
 const asyncHandler = require("express-async-handler");
 const { query } = require("express");
@@ -29,7 +29,7 @@ const getUserCart = async (req, res) => {
     let filter = { user: userId };
 
     // Truy vấn danh sách món ăn
-    const allCarts = await Cart.find(filter)
+    let allCarts = await Cart.find(filter)
       .populate({
         path: "store",
         populate: {
@@ -46,6 +46,8 @@ const getUserCart = async (req, res) => {
         message: "Carts not found",
       });
     }
+
+    allCarts = allCarts.filter((cart) => cart.store.status === "APPROVED");
 
     const storeRatings = await Rating.aggregate([
       { $group: { _id: "$store", avgRating: { $avg: "$ratingValue" }, amountRating: { $sum: 1 } } },
@@ -591,7 +593,6 @@ const completeCart = async (req, res) => {
     });
 
     await newNotification.save();
-    
 
     socket.emit("orderPlaced", {
       userIds,
@@ -611,7 +612,7 @@ const completeCart = async (req, res) => {
         status: newOrder.status,
         createdAt: newOrder.createdAt,
       },
-      userId: userId
+      userId: userId,
     });
 
     return res.status(201).json({

@@ -32,6 +32,8 @@ const getUserFavorite = async (req, res) => {
       });
     }
 
+    favorite.store = favorite.store.filter((store) => store.status === "APPROVED");
+
     const storeRatings = await Rating.aggregate([
       { $group: { _id: "$store", avgRating: { $avg: "$ratingValue" }, amountRating: { $sum: 1 } } },
     ]);

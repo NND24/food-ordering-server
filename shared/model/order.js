@@ -90,7 +90,7 @@ var orderSchema = new mongoose.Schema(
       type: Date,
       default: null,
       index: {
-        expireAfterSeconds: 1800, // 30 min
+        expireAfterSeconds: 60,
         partialFilterExpression: { status: "cancelled" },
       },
     },

@@ -18,7 +18,7 @@ const getUserOrder = asyncHandler(async (req, res, next) => {
     );
   }
 
-  const orders = await Order.find({ user: userId })
+  let orders = await Order.find({ user: userId })
     .populate({
       path: "store",
     })
@@ -35,6 +35,8 @@ const getUserOrder = asyncHandler(async (req, res, next) => {
       })
     );
   }
+
+  orders = orders.filter((order) => order.store.status === "APPROVED");
 
   res.status(200).json({
     success: true,
@@ -337,22 +339,25 @@ const updateOrderStatus = asyncHandler(async (req, res, next) => {
 
 const cancelOrder = asyncHandler(async (req, res, next) => {
   const { orderId } = req.params;
+  const userId = req.user._id;
 
   const order = await Order.findById(orderId);
   if (!order) {
     return next(createError(404, "Order not found"));
   }
 
+  if (order.user.toString() !== userId.toString()) {
+    return next(createError(403, "You are not authorized to cancel this order"));
+  }
+
   const cancellableStatuses = ["preorder", "pending"];
 
   if (cancellableStatuses.includes(order.status)) {
-    order.status = "cancelled";
-    order.cancelledAt = new Date();
-    await order.save();
+    await Order.findByIdAndDelete(orderId);
 
     res.status(200).json({
       success: true,
-      message: "Order status updated successfully",
+      message: "Order has been cancelled and deleted successfully",
     });
   } else {
     res.status(409).json({
