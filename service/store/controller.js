@@ -486,7 +486,7 @@ const createStaff = asyncHandler(async (req, res, next) => {
       phonenumber,
       gender,
       password,
-      role: ["user", role], // Assign staff role
+      role: ['user', ...role], // Assign staff role
     });
   }
 
