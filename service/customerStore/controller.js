@@ -71,11 +71,11 @@ const getAllStore = async (req, res) => {
 
       // Lọc các store trong 70
       const storesWithin70km = stores.filter((store) => store.distance <= 70);
-
+      stores = storesWithin70km;
       // Nếu có store nào trong 70km thì chỉ lấy các store đó, nếu không thì lấy tất cả
-      if (storesWithin70km.length > 0) {
-        stores = storesWithin70km;
-      }
+      // if (storesWithin70km.length > 0) {
+      //   stores = storesWithin70km;
+      // }
     }
 
     // Apply sorting manually
