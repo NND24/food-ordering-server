@@ -12,16 +12,37 @@ const { getPaginatedData } = require("./shared/utils/paging");
 const getAllStore = async (req, res) => {
   try {
     const { name, category, sort, limit, page, lat, lon } = req.query;
+
+    const removeVietnameseTones = (str) =>
+      str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D");
+
     let filterOptions = {};
     filterOptions.status = "APPROVED";
-    if (name) filterOptions.name = { $regex: name, $options: "i" };
+
     if (category) {
-      const categories = Array.isArray(category) ? category : category.split(",");
+      const categories = Array.isArray(category)
+        ? category
+        : category.split(",");
       filterOptions.storeCategory = { $in: categories };
     }
 
     // Fetch all stores first
-    let stores = await Store.find(filterOptions).populate("storeCategory").lean();
+    let stores = await Store.find(filterOptions)
+      .populate("storeCategory")
+      .lean();
+
+    // Sau khi lấy xong, lọc theo tên nếu có
+    if (name && name.trim()) {
+      const keyword = removeVietnameseTones(name.trim().toLowerCase());
+      stores = stores.filter((store) => {
+        const storeName = removeVietnameseTones(store.name.toLowerCase());
+        return storeName.includes(keyword);
+      });
+    }
 
     const storeRatings = await Rating.aggregate([
       {
@@ -33,7 +54,9 @@ const getAllStore = async (req, res) => {
       },
     ]);
     stores = stores.map((store) => {
-      const rating = storeRatings.find((r) => r._id.toString() == store._id.toString());
+      const rating = storeRatings.find(
+        (r) => r._id.toString() == store._id.toString()
+      );
       return {
         ...store,
         avgRating: rating ? rating.avgRating : 0,
@@ -48,44 +71,49 @@ const getAllStore = async (req, res) => {
       const toRad = (value) => (value * Math.PI) / 180;
 
       const calculateDistance = (lat1, lon1, lat2, lon2) => {
-        const R = 6371; // bán kính Trái Đất (km)
+        const R = 6371;
         const dLat = toRad(lat2 - lat1);
         const dLon = toRad(lon2 - lon1);
         const a =
           Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+          Math.cos(toRad(lat1)) *
+            Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         const distance = R * c;
         return distance;
       };
 
-      // Sau khi tính khoảng cách
       stores = stores.map((store) => {
         if (store.address?.lat != null && store.address?.lon != null) {
-          store.distance = calculateDistance(latUser, lonUser, store.address.lat, store.address.lon);
+          store.distance = calculateDistance(
+            latUser,
+            lonUser,
+            store.address.lat,
+            store.address.lon
+          );
         } else {
           store.distance = Infinity;
         }
         return store;
       });
 
-      // Lọc các store trong 70
-      const storesWithin70km = stores.filter((store) => store.distance <= 70);
-      stores = storesWithin70km;
-      // Nếu có store nào trong 70km thì chỉ lấy các store đó, nếu không thì lấy tất cả
-      // if (storesWithin70km.length > 0) {
-      //   stores = storesWithin70km;
-      // }
+      stores = stores.filter((store) => store.distance <= 70);
     }
 
     // Apply sorting manually
     if (sort === "rating") {
       stores = stores.sort((a, b) => b.avgRating - a.avgRating);
     } else if (sort === "standout") {
-      const storeOrders = await Order.aggregate([{ $group: { _id: "$store", orderCount: { $sum: 1 } } }]);
+      const storeOrders = await Order.aggregate([
+        { $group: { _id: "$store", orderCount: { $sum: 1 } } },
+      ]);
       stores = stores
         .map((store) => {
-          const order = storeOrders.find((o) => o._id.toString() == store._id.toString());
+          const order = storeOrders.find(
+            (o) => o._id.toString() == store._id.toString()
+          );
           return {
             ...store,
             orderCount: order ? order.orderCount : 0,
@@ -95,13 +123,16 @@ const getAllStore = async (req, res) => {
     } else if (sort === "name") {
       stores.sort((a, b) => a.name.localeCompare(b.name));
     }
+
     const totalItems = stores.length;
     if (limit && page) {
-      // Apply pagination manually
       const pageSize = parseInt(limit) || 10;
       const pageNumber = parseInt(page) || 1;
       const totalPages = Math.ceil(totalItems / pageSize);
-      const paginatedStores = stores.slice((pageNumber - 1) * pageSize, pageNumber * pageSize);
+      const paginatedStores = stores.slice(
+        (pageNumber - 1) * pageSize,
+        pageNumber * pageSize
+      );
 
       res.status(200).json({
         success: true,
@@ -151,7 +182,8 @@ const getStoreInformation = async (req, res) => {
 
     // Find rating data for the store
     const avgRating = storeRatings.length > 0 ? storeRatings[0].avgRating : 0;
-    const amountRating = storeRatings.length > 0 ? storeRatings[0].amountRating : 0;
+    const amountRating =
+      storeRatings.length > 0 ? storeRatings[0].amountRating : 0;
 
     res.status(200).json({
       success: true,
@@ -248,7 +280,9 @@ const getAllOrder = async (req, res) => {
     const { store_id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(store_id)) {
-      return res.status(400).json({ success: false, message: "Invalid store_id format" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid store_id format" });
     }
 
     let filterOptions = { store: store_id };
@@ -261,7 +295,10 @@ const getAllOrder = async (req, res) => {
     // Add search filter if name query is present
     if (name && name.trim() !== "") {
       const regex = new RegExp(name, "i"); // Case-insensitive search
-      filterOptions.$or = [{ customerName: regex }, { customerPhonenumber: regex }];
+      filterOptions.$or = [
+        { customerName: regex },
+        { customerPhonenumber: regex },
+      ];
     }
 
     const response = await getPaginatedData(
@@ -283,7 +320,9 @@ const getAllOrder = async (req, res) => {
       const regex = new RegExp(name, "i");
       response.data = response.data.filter(
         (order) =>
-          order.user?.name?.match(regex) || order.customerName?.match(regex) || order.customerPhonenumber?.match(regex)
+          order.user?.name?.match(regex) ||
+          order.customerName?.match(regex) ||
+          order.customerPhonenumber?.match(regex)
       );
     }
 
