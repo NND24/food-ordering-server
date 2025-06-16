@@ -637,6 +637,30 @@ const reOrder = async (req, res) => {
     if (!storeId) {
       return res.status(400).json({ success: false, message: "Invalid request body" });
     }
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: "Items cannot be empty" });
+    }
+
+    const store = await Store.findById(storeId);
+    if (!store) {
+      return res.status(404).json({ success: false, message: "Store not found" });
+    }
+
+    // 👉 Check nếu cửa hàng bị BLOCKED thì không cho reorder
+    if (store.status === "BLOCKED") {
+      return res.status(403).json({ success: false, message: "Cannot reorder from a blocked store" });
+    }
+
+    isHasOutOfStockDish = false;
+    items.map((item) => {
+      if (item.dish.stockStatus === "OUT_OF_STOCK") {
+        isHasOutOfStockDish = true;
+      }
+    });
+
+    if (isHasOutOfStockDish) {
+      return res.status(403).json({ success: false, message: "Order has out of stock dish" });
+    }
 
     let cart = await Cart.findOne({ user: userId, store: storeId });
 
