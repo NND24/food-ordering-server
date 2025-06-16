@@ -508,22 +508,34 @@ const createStaff = asyncHandler(async (req, res, next) => {
 });
 const updateStaff = asyncHandler(async (req, res, next) => {
   const { store_id } = req.params;
-  const { staff_id, name, email, phonenumber, gender, role } = req.body;
+  const { _id, name, email, phonenumber, gender, role } = req.body;
 
   const store = await Store.findById(store_id);
   if (!store) {
     return next(createError(404, "Cửa hàng không tồn tại"));
   }
 
-  let staff = await User.findById(staff_id);
-  if (!staff || !store.staff.includes(staff_id)) {
+  let staff = await User.findById(_id);
+  if (!staff || !store.staff.includes(_id)) {
     return next(createError(404, "Nhân viên không tồn tại trong cửa hàng này"));
   }
 
   // Chỉ cho phép cập nhật role với các giá trị hợp lệ
   const validRoles = ["staff", "manager"];
-  if (role && !validRoles.includes(role)) {
-    return next(createError(400, "Vai trò không hợp lệ"));
+
+  if (role) {
+    // Normalize role to an array
+    const roleArray = Array.isArray(role) ? role : [role];
+  
+    // Validate all roles
+    const isValid = roleArray.every(r => validRoles.includes(r));
+    if (!isValid) {
+      return next(createError(400, "Vai trò không hợp lệ"));
+    }
+  
+    // Assign "user" role by default
+    const updatedRole = ["user", ...roleArray];
+    staff.role = updatedRole;
   }
 
   // Cập nhật thông tin nhân viên
@@ -533,7 +545,7 @@ const updateStaff = asyncHandler(async (req, res, next) => {
   if (gender) staff.gender = gender;
   if (role) {
     console.log(role);
-    const updatedRole = [role, "user"];
+    const updatedRole = ["user", ...role];
     staff.role = updatedRole;
   }
   await staff.save();
@@ -541,6 +553,54 @@ const updateStaff = asyncHandler(async (req, res, next) => {
   res
     .status(200)
     .json({ message: "Thông tin nhân viên đã được cập nhật", staff });
+});
+
+const deleteStaff = asyncHandler(async (req, res, next) => {
+  const { store_id, staff_id } = req.params;
+
+  const store = await Store.findById(store_id);
+  if (!store) {
+    return next(createError(404, "Cửa hàng không tồn tại"));
+  }
+
+  const staff = await User.findById(staff_id);
+  if (!staff) {
+    return next(createError(404, "Nhân viên không tồn tại"));
+  }
+
+  // Check if the staff belongs to the store
+  const isInStore = store.staff.includes(staff._id);
+  if (!isInStore) {
+    return next(createError(400, "Nhân viên không thuộc cửa hàng này"));
+  }
+
+  // Remove staff from store's staff list
+  store.staff = store.staff.filter(id => id.toString() !== staff_id);
+  await store.save();
+
+  // Delete staff user (optional)
+  await User.findByIdAndDelete(staff_id);
+
+  res.status(200).json({
+    success: true,
+    message: "Nhân viên đã được xóa khỏi cửa hàng",
+  });
+});
+
+const changeStoreStatusTest = asyncHandler(async (req, res, next) => {
+  const store = await Store.findById("67c6e409f1c07122e88619d6");
+  if (store.openStatus == "CLOSED") {
+    store.openStatus = "OPEN";
+  }
+  else {
+    store.openStatus = "CLOSED";
+  }
+  await store.save();
+  res.status(200).json({
+    success: true,
+    message: "Store status changed successfully",
+    store,
+  });
 });
 
 module.exports = {
@@ -558,4 +618,6 @@ module.exports = {
   getStaff,
   createStaff,
   updateStaff,
+  deleteStaff,
+  changeStoreStatusTest
 };

@@ -68,7 +68,7 @@ const registerStoreOwner = asyncHandler(async (req, res, next) => {
     //   gender,
     //   password,
     // });
-    res.status(201).json("Tạo tài khoản thành công");
+    res.status(201).json({message: "Tạo tài khoản thành công"});
   } else {
     res.status(200).json({ message: "Tài khoản đã tồn tại", data: findUser });
     next(createError(409, "Tài khoản đã tồn tại"));

@@ -21,6 +21,8 @@ const {
   getStaff,
   createStaff,
   updateStaff,
+  deleteStaff,
+  changeStoreStatusTest
 } = require("./controller");
 
 const router = express.Router();
@@ -92,6 +94,18 @@ router.put(
   authorizeStoreStaff(["owner"]),
   updateStaff
 );
+
+router.delete(
+  "/:store_id/staff/:staff_id",
+  verifyToken,
+  authorizeStoreStaff(["owner", "manager"]),
+  deleteStaff
+)
+
+router.post(
+  "/test/changeStatus",
+  changeStoreStatusTest
+)
 // Missing delete staff
 
 module.exports = router;
