@@ -2,6 +2,11 @@ const Store = require("./shared/model/store");
 const Topping = require("./shared/model/topping");
 const Dish = require("./shared/model/dish");
 const Order = require("./shared/model/order");
+const FoodType = require("./shared/model/foodType");
+const Cart = require("./shared/model/cart");
+const ToppingGroup = require("./shared/model/toppingGroup");
+const Rating = require("./shared/model/rating");
+const Notification = require("./shared/model/notification");
 const createError = require("./shared/utils/createError");
 const asyncHandler = require("express-async-handler");
 const { getPaginatedData } = require("./shared/utils/paging");
@@ -10,35 +15,29 @@ const mongoose = require("mongoose");
 const getUserOrder = asyncHandler(async (req, res, next) => {
   const userId = req?.user?._id;
   if (!userId) {
-    next(
-      createError(400, {
-        success: false,
-        message: "User not found",
-      })
-    );
+    const error = new Error("User not found");
+    error.status = 400;
+    return next(error);
   }
 
   let orders = await Order.find({ user: userId })
-    .populate({
-      path: "store",
-    })
+    .populate("store")
     .populate("items.dish")
     .populate("items.toppings")
     .populate("shipper")
     .sort({ updatedAt: -1 });
 
+  // ✅ Lọc trước
+  orders = orders.filter((order) => order.store?.status === "APPROVED");
+
+  // ✅ Kiểm tra sau khi lọc
   if (!orders || orders.length === 0) {
-    next(
-      createError(404, {
-        success: false,
-        message: "Order not found",
-      })
-    );
+    const error = new Error("Order not found");
+    error.status = 404;
+    return next(error);
   }
 
-  orders = orders.filter((order) => order.store.status === "APPROVED");
-
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
     data: orders,
   });
@@ -48,32 +47,20 @@ const getOrderDetail = asyncHandler(async (req, res, next) => {
   const { orderId } = req.params;
 
   if (!orderId) {
-    next(
-      createError(400, {
-        success: false,
-        message: "orderId not found",
-      })
-    );
+    return next(createError(400, "orderId not found"));
   }
 
   const orderDetail = await Order.findById(orderId)
-    .populate({
-      path: "store",
-    })
+    .populate("store")
     .populate("items.dish")
     .populate("items.toppings")
     .populate("shipper");
 
-  if (!orderDetail || orderDetail.length === 0) {
-    next(
-      createError(404, {
-        success: false,
-        message: "Order not found",
-      })
-    );
+  if (!orderDetail) {
+    return next(createError(404, "Order not found"));
   }
 
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
     data: orderDetail,
   });
@@ -607,6 +594,93 @@ const updateOrder = async (req, res) => {
   }
 };
 
+const reOrder = async (req, res) => {
+  try {
+    const userId = req?.user?._id;
+    const { storeId, items } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "User not found" });
+    }
+    if (!storeId) {
+      return res.status(400).json({ success: false, message: "Invalid request body" });
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: "Items cannot be empty" });
+    }
+
+    const store = await Store.findById(storeId);
+    if (!store) {
+      return res.status(404).json({ success: false, message: "Store not found" });
+    }
+
+    // 👉 Check nếu cửa hàng bị BLOCKED thì không cho reorder
+    if (store.status === "BLOCKED") {
+      return res.status(403).json({ success: false, message: "Cannot reorder from a blocked store" });
+    }
+
+    isHasOutOfStockDish = false;
+    items.map((item) => {
+      if (item.dish.stockStatus === "OUT_OF_STOCK") {
+        isHasOutOfStockDish = true;
+      }
+    });
+
+    if (isHasOutOfStockDish) {
+      return res.status(403).json({ success: false, message: "Order has out of stock dish" });
+    }
+
+    let cart = await Cart.findOne({ user: userId, store: storeId });
+
+    if (cart) {
+      cart.items = items;
+      await cart.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "ReOrder updated successfully",
+        cart,
+      });
+    } else {
+      const newCart = await Cart.create({
+        user: userId,
+        store: storeId,
+        items,
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: "ReOrder successfully",
+        cart: newCart,
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const addStoreRating = asyncHandler(async (req, res, next) => {
+  try {
+    const { storeId } = req.params;
+    const userId = req.user?._id;
+    const { dishes, ratingValue, comment, images } = req.body;
+
+    await Rating.create({
+      user: userId,
+      store: storeId,
+      dishes,
+      ratingValue,
+      comment,
+      images,
+    });
+
+    res.status(201).json("Add rating successfully");
+  } catch (error) {
+    next(createError(500, error.message));
+  }
+});
+
 module.exports = {
   getUserOrder,
   getOrderDetail,
@@ -623,4 +697,6 @@ module.exports = {
   getAllOrder,
   updateOrder,
   getOrderDetailForStore,
+  reOrder,
+  addStoreRating,
 };
