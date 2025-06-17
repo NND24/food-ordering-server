@@ -11,8 +11,10 @@ const { getPaginatedData } = require("./shared/utils/paging");
 
 const getAllStore = async (req, res) => {
   try {
+    // Nhận các tham số truy vấn từ URL
     const { name, category, sort, limit, page, lat, lon } = req.query;
 
+    // Hàm loại bỏ dấu tiếng Việt để tìm kiếm không dấu
     const removeVietnameseTones = (str) =>
       str
         .normalize("NFD")
@@ -20,9 +22,11 @@ const getAllStore = async (req, res) => {
         .replace(/đ/g, "d")
         .replace(/Đ/g, "D");
 
+    // Tạo bộ lọc cơ bản, chỉ lấy store đã được duyệt
     let filterOptions = {};
     filterOptions.status = "APPROVED";
 
+    // Lọc theo danh mục (nếu có)
     if (category) {
       const categories = Array.isArray(category)
         ? category
@@ -30,20 +34,21 @@ const getAllStore = async (req, res) => {
       filterOptions.storeCategory = { $in: categories };
     }
 
-    // Fetch all stores first
+    // Truy vấn ban đầu từ MongoDB (chỉ lọc theo danh mục & status)
     let stores = await Store.find(filterOptions)
-      .populate("storeCategory")
+      .populate("storeCategory") // Populate danh mục cửa hàng
       .lean();
 
-    // Sau khi lấy xong, lọc theo tên nếu có
+    // Lọc thêm theo tên sau khi lấy về, dùng tìm kiếm không dấu
     if (name && name.trim()) {
-      const keyword = removeVietnameseTones(name.trim().toLowerCase());
+      const keyword = name.trim().toLowerCase(); // ❌ Không loại bỏ dấu
       stores = stores.filter((store) => {
-        const storeName = removeVietnameseTones(store.name.toLowerCase());
+        const storeName = store.name.toLowerCase(); // ❌ Không loại bỏ dấu
         return storeName.includes(keyword);
       });
     }
 
+    // Tính điểm đánh giá trung bình và số lượng đánh giá
     const storeRatings = await Rating.aggregate([
       {
         $group: {
@@ -53,9 +58,11 @@ const getAllStore = async (req, res) => {
         },
       },
     ]);
+
+    // Ghép thông tin rating vào mỗi store
     stores = stores.map((store) => {
       const rating = storeRatings.find(
-        (r) => r._id.toString() == store._id.toString()
+        (r) => r._id.toString() === store._id.toString()
       );
       return {
         ...store,
@@ -64,6 +71,7 @@ const getAllStore = async (req, res) => {
       };
     });
 
+    // Nếu có tọa độ người dùng → tính khoảng cách và lọc trong bán kính 70km
     if (lat && lon) {
       const latUser = parseFloat(lat);
       const lonUser = parseFloat(lon);
@@ -71,20 +79,19 @@ const getAllStore = async (req, res) => {
       const toRad = (value) => (value * Math.PI) / 180;
 
       const calculateDistance = (lat1, lon1, lat2, lon2) => {
-        const R = 6371;
+        const R = 6371; // Bán kính trái đất (km)
         const dLat = toRad(lat2 - lat1);
         const dLon = toRad(lon2 - lon1);
         const a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.sin(dLat / 2) ** 2 +
           Math.cos(toRad(lat1)) *
             Math.cos(toRad(lat2)) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
+            Math.sin(dLon / 2) ** 2;
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const distance = R * c;
-        return distance;
+        return R * c;
       };
 
+      // Tính distance từng store và lọc <= 70km
       stores = stores.map((store) => {
         if (store.address?.lat != null && store.address?.lon != null) {
           store.distance = calculateDistance(
@@ -94,7 +101,7 @@ const getAllStore = async (req, res) => {
             store.address.lon
           );
         } else {
-          store.distance = Infinity;
+          store.distance = Infinity; // Không có tọa độ → bỏ
         }
         return store;
       });
@@ -102,17 +109,19 @@ const getAllStore = async (req, res) => {
       stores = stores.filter((store) => store.distance <= 70);
     }
 
-    // Apply sorting manually
+    // Sắp xếp theo các tiêu chí nếu có
     if (sort === "rating") {
       stores = stores.sort((a, b) => b.avgRating - a.avgRating);
     } else if (sort === "standout") {
+      // Sắp xếp theo số lượng đơn hàng
       const storeOrders = await Order.aggregate([
         { $group: { _id: "$store", orderCount: { $sum: 1 } } },
       ]);
+
       stores = stores
         .map((store) => {
           const order = storeOrders.find(
-            (o) => o._id.toString() == store._id.toString()
+            (o) => o._id.toString() === store._id.toString()
           );
           return {
             ...store,
@@ -125,15 +134,19 @@ const getAllStore = async (req, res) => {
     }
 
     const totalItems = stores.length;
+
+    // Phân trang nếu có limit + page
     if (limit && page) {
       const pageSize = parseInt(limit) || 10;
       const pageNumber = parseInt(page) || 1;
       const totalPages = Math.ceil(totalItems / pageSize);
+
       const paginatedStores = stores.slice(
         (pageNumber - 1) * pageSize,
         pageNumber * pageSize
       );
 
+      // Trả kết quả có phân trang
       res.status(200).json({
         success: true,
         total: totalItems,
@@ -143,6 +156,7 @@ const getAllStore = async (req, res) => {
         data: paginatedStores,
       });
     } else {
+      // Trả kết quả đầy đủ
       res.status(200).json({
         success: true,
         total: totalItems,
@@ -150,6 +164,7 @@ const getAllStore = async (req, res) => {
       });
     }
   } catch (error) {
+    // Lỗi hệ thống
     res.status(500).json({ success: false, message: error.message });
   }
 };
