@@ -67,8 +67,17 @@ const getOngoingStores = asyncHandler(async (req, res, next) => {
 const getAllStore = async (req, res) => {
   try {
     const { name, category, sort, limit, page, lat, lon } = req.query;
+
+    const removeVietnameseTones = (str) =>
+      str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D");
+
     let filterOptions = {};
-    if (name) filterOptions.name = { $regex: name, $options: "i" };
+    filterOptions.status = "APPROVED";
+
     if (category) {
       const categories = Array.isArray(category)
         ? category
@@ -80,6 +89,15 @@ const getAllStore = async (req, res) => {
     let stores = await Store.find(filterOptions)
       .populate("storeCategory")
       .lean();
+
+    // Sau khi lấy xong, lọc theo tên nếu có
+    if (name && name.trim()) {
+      const keyword = removeVietnameseTones(name.trim().toLowerCase());
+      stores = stores.filter((store) => {
+        const storeName = removeVietnameseTones(store.name.toLowerCase());
+        return storeName.includes(keyword);
+      });
+    }
 
     const storeRatings = await Rating.aggregate([
       {
@@ -108,7 +126,7 @@ const getAllStore = async (req, res) => {
       const toRad = (value) => (value * Math.PI) / 180;
 
       const calculateDistance = (lat1, lon1, lat2, lon2) => {
-        const R = 6371; // bán kính Trái Đất (km)
+        const R = 6371;
         const dLat = toRad(lat2 - lat1);
         const dLon = toRad(lon2 - lon1);
         const a =
@@ -122,7 +140,6 @@ const getAllStore = async (req, res) => {
         return distance;
       };
 
-      // Sau khi tính khoảng cách
       stores = stores.map((store) => {
         if (store.address?.lat != null && store.address?.lon != null) {
           store.distance = calculateDistance(
@@ -137,13 +154,7 @@ const getAllStore = async (req, res) => {
         return store;
       });
 
-      // Lọc các store trong 70
-      const storesWithin70km = stores.filter((store) => store.distance <= 70);
-
-      // Nếu có store nào trong 70km thì chỉ lấy các store đó, nếu không thì lấy tất cả
-      if (storesWithin70km.length > 0) {
-        stores = storesWithin70km;
-      }
+      stores = stores.filter((store) => store.distance <= 70);
     }
 
     // Apply sorting manually
@@ -167,9 +178,9 @@ const getAllStore = async (req, res) => {
     } else if (sort === "name") {
       stores.sort((a, b) => a.name.localeCompare(b.name));
     }
+
     const totalItems = stores.length;
     if (limit && page) {
-      // Apply pagination manually
       const pageSize = parseInt(limit) || 10;
       const pageNumber = parseInt(page) || 1;
       const totalPages = Math.ceil(totalItems / pageSize);
@@ -197,6 +208,7 @@ const getAllStore = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 const approveStore = asyncHandler(async (req, res, next) => {
   const { store_id } = req.params;
