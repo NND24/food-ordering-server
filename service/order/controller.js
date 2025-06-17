@@ -189,9 +189,6 @@ const acceptOrder = asyncHandler(async (req, res, next) => {
   const { orderId } = req.params;
   const shipperId = req?.user?._id;
 
-  console.log("🚀 Shipper ID:", shipperId);
-  console.log("🚀 Order ID:", orderId);
-
   if (!orderId) {
     return next(
       createError(400, {

@@ -36,7 +36,6 @@ const services = {
 // Parse ALLOWED_ORIGINS from .env and split by commas
 const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 
-
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -49,7 +48,9 @@ app.use(
     credentials: true,
   })
 );
-
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "OK" });
+});
 // Proxy requests to the correct service
 app.use("/api/v1/:service/*", async (req, res) => {
   const serviceName = req.params.service;
